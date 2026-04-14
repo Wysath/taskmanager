@@ -1,12 +1,13 @@
+"use client";
 import { CheckSquare2 } from "lucide-react";
 import TaskItem from "./TaskItem";
 
-const TaskList = ({ taskItems, onToggleTask, onEditTask, onDeleteTask }) => {
+const TaskList = ({ taskItems = [], onToggleTask, onEditTask, onDeleteTask }) => {
   return (
     <>
       {taskItems.length > 0 ? (
-        /* Active Tasks Section */
-        <section>
+        // Section tâches actives
+        <section aria-label="Liste des tâches">
           <div className="flex flex-col gap-4">
             {taskItems.map((taskItem) => (
               <TaskItem
@@ -24,8 +25,11 @@ const TaskList = ({ taskItems, onToggleTask, onEditTask, onDeleteTask }) => {
           </div>
         </section>
       ) : (
-        /* Empty State Section */
-        <section className="mt-16 pt-16 border-t border-outline-variant/10">
+        // Section d'état vide
+        <section
+          className="mt-16 pt-16 border-t border-outline-variant/10"
+          aria-label="Aucune tâche disponible"
+        >
           <div className="flex flex-col items-center justify-center py-20 bg-surface-container-low/40 rounded-3xl border border-dashed border-outline-variant/30">
             <div className="w-20 h-20 bg-surface-container-lowest rounded-full flex items-center justify-center mb-6 shadow-sm">
               <CheckSquare2

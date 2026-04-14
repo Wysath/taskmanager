@@ -16,16 +16,14 @@ import {
 import AddTaskForm from "../components/AddTaskForm";
 import TaskList from "../components/TaskList";
 import SearchBar from "../components/SearchBar";
-import FilterBar from "../components/FilterBar";
 
 const initialTaskItems = [
   {
     id: 1,
     title: "Revue de projet",
     description: "Préparer la synthèse pour la réunion de 14:00",
-    priority: "haute", // haute > moyenne > basse
+    priority: "haute",
     completed: false,
-    date: new Date("2024-06-01T10:00:00Z"),
   },
   {
     id: 2,
@@ -33,7 +31,6 @@ const initialTaskItems = [
     description: "Point de suivi avec Jean Dupont",
     priority: "moyenne",
     completed: false,
-    date: new Date("2024-06-03T15:00:00Z"),
   },
   {
     id: 3,
@@ -41,50 +38,61 @@ const initialTaskItems = [
     description: "Finaliser les slides du comité",
     priority: "basse",
     completed: false,
-    date: new Date("2024-06-02T09:00:00Z"),
   },
 ];
 
+// Rappel : la balise <html lang="fr"> est à intégrer dans le fichier racine _document.js ou layout.js de Next.js pour application globale.
+
 export default function Home() {
-  // --- États principaux requis ---
+  // --- États principaux ---
   const [tasks, setTasks] = useState(initialTaskItems);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all"); // 'all', 'active', 'completed'
-  const [sortOrder, setSortOrder] = useState("priority"); // 'priority', 'date'
-
-  // Pour gestion modales édition/suppression (hors sujet prompt, mais utiles pour TaskList demo)
+  const [statusFilter, setStatusFilter] = useState("all"); // 'all', 'active', 'completed'
+  const [prioritySort, setPrioritySort] = useState("none"); // 'none', 'highToLow', 'lowToHigh'
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [draftTaskTitle, setDraftTaskTitle] = useState("");
   const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState(null);
-
-  // Ordre pour tri de priorité
   const priorityOrder = { haute: 3, moyenne: 2, basse: 1 };
 
-  // --- Filtrage, Recherche, Tri ---
-  let displayedTasks = tasks
-    // Recherche par titre (case-insensitive substring)
+  // --- Logique de filtrage et triage ---
+  const filteredAndSortedTasks = tasks
     .filter((task) => {
       if (!searchQuery.trim()) return true;
-      return task.title.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        task.title.toLowerCase().includes(q) ||
+        (task.description && task.description.toLowerCase().includes(q))
+      );
     })
-    // Filtre statut
     .filter((task) => {
-      if (filter === "active") return !task.completed;
-      if (filter === "completed") return task.completed;
-      return true; // 'all'
+      if (statusFilter === "all") return true;
+      if (statusFilter === "active") return !task.completed;
+      if (statusFilter === "completed") return task.completed;
+      return true;
     });
 
-  if (sortOrder === "priority") {
-    displayedTasks = [...displayedTasks].sort(
-      (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
-    );
-  } else if (sortOrder === "date") {
-    displayedTasks = [...displayedTasks].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+  let finalTasks = [...filteredAndSortedTasks];
+  if (prioritySort === "highToLow") {
+    finalTasks.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+  } else if (prioritySort === "lowToHigh") {
+    finalTasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
   }
 
-  // --- Gestion ajout/édition/suppression ---
+  // --- Fonctions de gestion ---
+  const handleToggleTask = (targetTaskId) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === targetTaskId ? { ...task, completed: !task.completed } : task
+      )
+    );
+  };
+
+  const handleDeleteTask = (targetTaskId) => {
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== targetTaskId)
+    );
+  };
+
   const handleAddTask = ({ title, priority }) => {
     setTasks((currentTasks) => {
       const nextId =
@@ -98,26 +106,16 @@ export default function Home() {
           description: "",
           priority,
           completed: false,
-          date: new Date(),
         },
         ...currentTasks,
       ];
     });
   };
 
-  // Fonctions pour TaskList (utiles pour la démo) --
-  const handleToggleTask = (id) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
-
-  const handleEditTask = (id) => {
-    const targetTask = tasks.find((task) => task.id === id);
+  const handleEditTask = (targetTaskId) => {
+    const targetTask = tasks.find((task) => task.id === targetTaskId);
     if (!targetTask) return;
-    setEditingTaskId(id);
+    setEditingTaskId(targetTaskId);
     setDraftTaskTitle(targetTask.title);
   };
 
@@ -137,8 +135,8 @@ export default function Home() {
     handleCancelEditTask();
   };
 
-  const handleRequestDeleteTask = (id) => {
-    setPendingDeleteTaskId(id);
+  const handleRequestDeleteTask = (targetTaskId) => {
+    setPendingDeleteTaskId(targetTaskId);
   };
 
   const handleCancelDeleteTask = () => {
@@ -147,14 +145,12 @@ export default function Home() {
 
   const handleConfirmDeleteTask = () => {
     if (pendingDeleteTaskId == null) return;
-    setTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== pendingDeleteTaskId)
-    );
+    handleDeleteTask(pendingDeleteTaskId);
     setPendingDeleteTaskId(null);
   };
 
   return (
-    <main className="min-h-screen bg-surface text-on-surface md:flex">
+    <main className="min-h-screen bg-surface text-on-surface md:flex" tabIndex={-1}>
       {/* Barre laterale desktop */}
       <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col gap-4 border-r border-outline-variant/10 bg-surface-container py-8 md:flex">
         <div className="mb-8 px-8">
@@ -165,37 +161,47 @@ export default function Home() {
             Productivity Portal
           </p>
         </div>
-        <nav className="flex flex-col gap-1 pr-4" aria-label="Navigation laterale">
+
+        <nav className="flex flex-col gap-1 pr-4" aria-label="Navigation principale latérale">
           <a
             href="#"
-            className="flex items-center gap-4 rounded-r-full bg-surface-container-lowest px-8 py-3 font-semibold text-primary transition-all duration-300"
+            className="flex items-center gap-4 rounded-r-full bg-surface-container-lowest px-8 py-3 font-semibold text-primary transition-all duration-300 focus:outline focus:outline-2 focus:outline-primary"
+            tabIndex={0}
+            aria-label="Accueil Sanctuary"
           >
-            <LayoutDashboard size={18} aria-hidden="true" />
+            <LayoutDashboard size={18} aria-hidden="true" role="img" focusable="false" />
             <span className="text-sm">Sanctuary</span>
           </a>
           <a
             href="#"
-            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1"
+            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline focus:outline-2 focus:outline-primary"
+            tabIndex={0}
+            aria-label="Projets"
           >
-            <GitBranch size={18} aria-hidden="true" />
+            <GitBranch size={18} aria-hidden="true" role="img" focusable="false" />
             <span className="text-sm">Projects</span>
           </a>
           <a
             href="#"
-            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1"
+            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline focus:outline-2 focus:outline-primary"
+            tabIndex={0}
+            aria-label="Focus"
           >
-            <CircleDot size={18} aria-hidden="true" />
+            <CircleDot size={18} aria-hidden="true" role="img" focusable="false" />
             <span className="text-sm">Focus</span>
           </a>
           <a
             href="#"
-            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1"
+            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline focus:outline-2 focus:outline-primary"
+            tabIndex={0}
+            aria-label="Archive"
           >
-            <Archive size={18} aria-hidden="true" />
+            <Archive size={18} aria-hidden="true" role="img" focusable="false" />
             <span className="text-sm">Archive</span>
           </a>
         </nav>
       </aside>
+
       <section className="min-w-0 flex-1 bg-[#f8fafc]">
         {/* Barre superieure contenu */}
         <header className="sticky top-16 z-30 w-full bg-surface">
@@ -205,23 +211,24 @@ export default function Home() {
             </h2>
             <div className="flex items-center gap-4">
               <button
-                className="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container"
+                className="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus:outline focus:outline-2 focus:outline-primary"
                 type="button"
-                aria-label="Calendrier"
+                aria-label="Afficher le calendrier"
               >
-                <CalendarDays size={20} aria-hidden="true" />
+                <CalendarDays size={20} aria-hidden="true" role="img" focusable="false" />
               </button>
               <button
-                className="relative rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container"
+                className="relative rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus:outline focus:outline-2 focus:outline-primary"
                 type="button"
-                aria-label="Notifications"
+                aria-label="Afficher les notifications"
               >
-                <Bell size={20} aria-hidden="true" />
+                <Bell size={20} aria-hidden="true" role="img" focusable="false" />
                 <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-tertiary" />
               </button>
             </div>
           </div>
         </header>
+
         <div className="mx-auto w-full max-w-5xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -232,59 +239,95 @@ export default function Home() {
                 Organisez votre flux de travail architectural.
               </p>
             </div>
-          </header>
-          <div className="flex flex-wrap items-center gap-2 mb-6">
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
-            <FilterBar filter={filter} onFilterChange={setFilter} />
-            <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
-              <label htmlFor="sort-order" className="sr-only">
-                Trier par
-              </label>
-              <select
-                id="sort-order"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
-              >
-                <option value="priority">Tri par priorité</option>
-                <option value="date">Tri par date</option>
-              </select>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Le composant SearchBar DOIT contenir un label accessible (modifier son code si besoin).
+                  On suppose qu’un label "Recherche de tâche" y est fourni. */}
+              <SearchBar value={searchQuery} onChange={setSearchQuery} label="Recherche de tâche" />
+
+              <div className="flex items-center gap-2 rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
+                {/* Icon décoratif, non pertinent pour l’accessibilité */}
+                <Filter size={18} aria-hidden="true" role="img" focusable="false" />
+                <label htmlFor="status-filter" className="text-sm">
+                  Statut&nbsp;:
+                </label>
+                <select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline focus:outline-2 focus:outline-primary"
+                  aria-label="Filtrer par statut"
+                >
+                  <option value="all">Tous statuts</option>
+                  <option value="active">Actives</option>
+                  <option value="completed">Complétées</option>
+                </select>
+              </div>
+              <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant flex items-center gap-2">
+                <label htmlFor="priority-sort" className="text-sm">
+                  Priorité&nbsp;:
+                </label>
+                <select
+                  id="priority-sort"
+                  value={prioritySort}
+                  onChange={(e) => setPrioritySort(e.target.value)}
+                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline focus:outline-2 focus:outline-primary"
+                  aria-label="Trier par priorité"
+                >
+                  <option value="none">Sans tri</option>
+                  <option value="highToLow">Priorité décroissante</option>
+                  <option value="lowToHigh">Priorité croissante</option>
+                </select>
+              </div>
             </div>
-          </div>
+          </header>
+
+          {/* AddTaskForm DOIT fournir un label visible ou sr-only pour tous ses champs */}
           <AddTaskForm onAddTask={handleAddTask} />
+
+          {/* TaskList et ses éléments interactifs doivent être accessibles (boutons avec aria-label, etc.) */}
           <TaskList
-            tasks={displayedTasks}
+            taskItems={finalTasks}
             onToggleTask={handleToggleTask}
             onEditTask={handleEditTask}
             onDeleteTask={handleRequestDeleteTask}
           />
         </div>
       </section>
+
       {/* Navigation mobile flottante */}
-      <nav className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center justify-between rounded-full border border-white/20 bg-white/70 px-6 py-2 shadow-[0px_20px_40px_rgba(25,27,35,0.06)] backdrop-blur-xl md:hidden">
+      <nav
+        className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center justify-between rounded-full border border-white/20 bg-white/90 px-6 py-2 shadow-[0px_20px_40px_rgba(25,27,35,0.08)] backdrop-blur-xl md:hidden"
+        aria-label="Navigation mobile principale"
+      >
         <a
           href="#"
-          className="flex flex-col items-center rounded-full bg-linear-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white"
+          aria-label="Voir les tâches"
+          className="flex flex-col items-center rounded-full bg-gradient-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white focus:outline focus:outline-2 focus:outline-primary"
+          tabIndex={0}
         >
-          <CheckSquare size={18} aria-hidden="true" />
+          <CheckSquare size={18} aria-hidden="true" role="img" focusable="false" />
           <span className="text-[10px] uppercase tracking-widest">Tasks</span>
         </a>
         <a
           href="#"
-          className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80"
+          aria-label="Rechercher"
+          className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline focus:outline-2 focus:outline-primary"
+          tabIndex={0}
         >
-          <Search size={18} aria-hidden="true" />
+          <Search size={18} aria-hidden="true" role="img" focusable="false" />
           <span className="text-[10px] uppercase tracking-widest">Search</span>
         </a>
         <a
           href="#"
-          className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80"
+          aria-label="Paramètres"
+          className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline focus:outline-2 focus:outline-primary"
+          tabIndex={0}
         >
-          <Settings size={18} aria-hidden="true" />
+          <Settings size={18} aria-hidden="true" role="img" focusable="false" />
           <span className="text-[10px] uppercase tracking-widest">Settings</span>
         </a>
       </nav>
-      {/* Modale suppression */}
+
       {pendingDeleteTaskId != null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
@@ -294,23 +337,23 @@ export default function Home() {
         >
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
             <h4 className="text-lg font-bold text-zinc-900">
-              Supprimer cette tâche ?
+              Supprimer cette tâche&nbsp;?
             </h4>
-            <p className="mt-2 text-sm text-zinc-600">
-              Cette action est irréversible. Voulez-vous continuer ?
+            <p className="mt-2 text-sm text-zinc-700">
+              Cette action est irréversible. Voulez-vous continuer&nbsp;?
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={handleCancelDeleteTask}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 cursor-pointer"
+                className="rounded-lg border border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteTask}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 cursor-pointer"
+                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
               >
                 Supprimer
               </button>
@@ -318,7 +361,7 @@ export default function Home() {
           </div>
         </div>
       )}
-      {/* Modale édition */}
+
       {editingTaskId != null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
@@ -330,33 +373,43 @@ export default function Home() {
             <h4 className="text-lg font-bold text-zinc-900">
               Modifier la tâche
             </h4>
-            <label htmlFor="edit-task-title" className="mt-3 block text-sm text-zinc-600">
-              Nouveau titre
-            </label>
-            <input
-              id="edit-task-title"
-              type="text"
-              value={draftTaskTitle}
-              onChange={(event) => setDraftTaskTitle(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Saisissez un titre"
-            />
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCancelEditTask}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmEditTask}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer"
-              >
-                Enregistrer
-              </button>
-            </div>
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                handleConfirmEditTask();
+              }}
+              className="mt-4"
+              aria-label="Formulaire d’édition de tâche"
+            >
+              <label htmlFor="edit-task-title" className="block text-sm text-zinc-700">
+                Nouveau titre&nbsp;:
+              </label>
+              <input
+                id="edit-task-title"
+                type="text"
+                value={draftTaskTitle}
+                onChange={(event) => setDraftTaskTitle(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-400 px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                placeholder="Saisissez un titre"
+                autoFocus
+                aria-required="true"
+              />
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelEditTask}
+                  className="rounded-lg border border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

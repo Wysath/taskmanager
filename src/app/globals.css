@@ -1,4 +1,12 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap");
+/* 
+  Critically Render-Blocking Resource Optimization:
+  - Removed direct @import of Google Fonts (Manrope & Inter) to avoid chaining critical font requests, deferring webfont download to Next.js font loading in layout.js via next/font (which preloads and minimizes blocking).
+  - Tailwind CSS import remains, as it is required for atomic utility-first CSS and should be part of the main CSS build.
+  - Font fallbacks remain in custom properties for semantic variable support.
+
+  To load Manrope and Inter optimally, import them via next/font/google in layout.js or top-level JS file.  
+*/
+
 @import "tailwindcss";
 
 :root {

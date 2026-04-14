@@ -1,4 +1,4 @@
-export default function Header() {
+const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-200 bg-white/95 shadow-sm backdrop-blur">
       <nav
@@ -9,7 +9,6 @@ export default function Header() {
         <span className="text-xl font-bold tracking-tight text-zinc-900">
           TaskManager
         </span>
-
         {/* Menu de navigation fictif */}
         <div className="flex items-center gap-6 text-sm font-medium text-zinc-600">
           <a
@@ -28,4 +27,6 @@ export default function Header() {
       </nav>
     </header>
   );
-}
+};
+
+export default Header;

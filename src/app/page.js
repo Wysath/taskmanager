@@ -23,8 +23,9 @@ const initialTaskItems = [
     id: 1,
     title: "Revue de projet",
     description: "Préparer la synthèse pour la réunion de 14:00",
-    priority: "haute",
+    priority: "haute", // haute > moyenne > basse
     completed: false,
+    date: new Date("2024-06-01T10:00:00Z"),
   },
   {
     id: 2,
@@ -32,6 +33,7 @@ const initialTaskItems = [
     description: "Point de suivi avec Jean Dupont",
     priority: "moyenne",
     completed: false,
+    date: new Date("2024-06-03T15:00:00Z"),
   },
   {
     id: 3,
@@ -39,74 +41,50 @@ const initialTaskItems = [
     description: "Finaliser les slides du comité",
     priority: "basse",
     completed: false,
+    date: new Date("2024-06-02T09:00:00Z"),
   },
 ];
 
-
 export default function Home() {
-  // --- États principaux ---
+  // --- États principaux requis ---
   const [tasks, setTasks] = useState(initialTaskItems);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // 'all', 'active', 'completed'
-  const [prioritySort, setPrioritySort] = useState("none"); // 'none', 'highToLow', 'lowToHigh'
+  const [filter, setFilter] = useState("all"); // 'all', 'active', 'completed'
+  const [sortOrder, setSortOrder] = useState("priority"); // 'priority', 'date'
+
+  // Pour gestion modales édition/suppression (hors sujet prompt, mais utiles pour TaskList demo)
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [draftTaskTitle, setDraftTaskTitle] = useState("");
   const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState(null);
+
+  // Ordre pour tri de priorité
   const priorityOrder = { haute: 3, moyenne: 2, basse: 1 };
 
-  // --- Logique de filtrage et triage ---
-  //
-  // Calcul de la liste finale à afficher :
-  // 1. Filtrer par texte (recherche)
-  // 2. Filtrer par statut (active/completed)
-  // 3. Trier par priorité
-  //
-  // Cette variable est recalculée à chaque rendu.
-  const filteredAndSortedTasks = tasks
-    // 1. Filtrer par texte (recherche)
+  // --- Filtrage, Recherche, Tri ---
+  let displayedTasks = tasks
+    // Recherche par titre (case-insensitive substring)
     .filter((task) => {
       if (!searchQuery.trim()) return true;
-      const q = searchQuery.trim().toLowerCase();
-      return (
-        task.title.toLowerCase().includes(q) ||
-        (task.description && task.description.toLowerCase().includes(q))
-      );
+      return task.title.toLowerCase().includes(searchQuery.trim().toLowerCase());
     })
-    // 2. Filtrer par statut
+    // Filtre statut
     .filter((task) => {
-      if (statusFilter === "all") return true;
-      if (statusFilter === "active") return !task.completed;
-      if (statusFilter === "completed") return task.completed;
-      return true;
+      if (filter === "active") return !task.completed;
+      if (filter === "completed") return task.completed;
+      return true; // 'all'
     });
 
-  // 3. Trier par priorité
-  let finalTasks = [...filteredAndSortedTasks];
-  if (prioritySort === "highToLow") {
-    finalTasks.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
-  } else if (prioritySort === "lowToHigh") {
-    finalTasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  if (sortOrder === "priority") {
+    displayedTasks = [...displayedTasks].sort(
+      (a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]
+    );
+  } else if (sortOrder === "date") {
+    displayedTasks = [...displayedTasks].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
   }
 
-  // --- Fonctions de gestion ---
-
-  // Bascule l'etat complete d'une tache
-  const handleToggleTask = (targetTaskId) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === targetTaskId ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
-
-  // Supprime une tache de la liste
-  const handleDeleteTask = (targetTaskId) => {
-    setTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== targetTaskId)
-    );
-  };
-
-  // Ajoute une nouvelle tache avec titre et priorite
+  // --- Gestion ajout/édition/suppression ---
   const handleAddTask = ({ title, priority }) => {
     setTasks((currentTasks) => {
       const nextId =
@@ -120,27 +98,34 @@ export default function Home() {
           description: "",
           priority,
           completed: false,
+          date: new Date(),
         },
         ...currentTasks,
       ];
     });
   };
 
-  // Ouvre la modale d'edition
-  const handleEditTask = (targetTaskId) => {
-    const targetTask = tasks.find((task) => task.id === targetTaskId);
+  // Fonctions pour TaskList (utiles pour la démo) --
+  const handleToggleTask = (id) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    );
+  };
+
+  const handleEditTask = (id) => {
+    const targetTask = tasks.find((task) => task.id === id);
     if (!targetTask) return;
-    setEditingTaskId(targetTaskId);
+    setEditingTaskId(id);
     setDraftTaskTitle(targetTask.title);
   };
 
-  // Annule l'edition en cours
   const handleCancelEditTask = () => {
     setEditingTaskId(null);
     setDraftTaskTitle("");
   };
 
-  // Confirme l'edition du titre
   const handleConfirmEditTask = () => {
     const nextTitle = draftTaskTitle.trim();
     if (!nextTitle || editingTaskId == null) return;
@@ -152,20 +137,19 @@ export default function Home() {
     handleCancelEditTask();
   };
 
-  // Ouvre la modale de confirmation de suppression
-  const handleRequestDeleteTask = (targetTaskId) => {
-    setPendingDeleteTaskId(targetTaskId);
+  const handleRequestDeleteTask = (id) => {
+    setPendingDeleteTaskId(id);
   };
 
-  // Annule la suppression
   const handleCancelDeleteTask = () => {
     setPendingDeleteTaskId(null);
   };
 
-  // Confirme puis supprime la tâche
   const handleConfirmDeleteTask = () => {
     if (pendingDeleteTaskId == null) return;
-    handleDeleteTask(pendingDeleteTaskId);
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== pendingDeleteTaskId)
+    );
     setPendingDeleteTaskId(null);
   };
 
@@ -181,7 +165,6 @@ export default function Home() {
             Productivity Portal
           </p>
         </div>
-
         <nav className="flex flex-col gap-1 pr-4" aria-label="Navigation laterale">
           <a
             href="#"
@@ -212,9 +195,7 @@ export default function Home() {
             <span className="text-sm">Archive</span>
           </a>
         </nav>
-
       </aside>
-
       <section className="min-w-0 flex-1 bg-[#f8fafc]">
         {/* Barre superieure contenu */}
         <header className="sticky top-16 z-30 w-full bg-surface">
@@ -241,7 +222,6 @@ export default function Home() {
             </div>
           </div>
         </header>
-
         <div className="mx-auto w-full max-w-5xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -252,38 +232,34 @@ export default function Home() {
                 Organisez votre flux de travail architectural.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
-              <FilterBar currentFilter={statusFilter} onFilterChange={setStatusFilter} />
-              <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
-                <label htmlFor="priority-sort" className="sr-only">
-                  Trier par priorité
-                </label>
-                <select
-                  id="priority-sort"
-                  value={prioritySort}
-                  onChange={(e) => setPrioritySort(e.target.value)}
-                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
-                >
-                  <option value="none">Sans tri</option>
-                  <option value="highToLow">Priorité décroissante</option>
-                  <option value="lowToHigh">Priorité croissante</option>
-                </select>
-              </div>
-            </div>
           </header>
-
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            <FilterBar filter={filter} onFilterChange={setFilter} />
+            <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
+              <label htmlFor="sort-order" className="sr-only">
+                Trier par
+              </label>
+              <select
+                id="sort-order"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
+              >
+                <option value="priority">Tri par priorité</option>
+                <option value="date">Tri par date</option>
+              </select>
+            </div>
+          </div>
           <AddTaskForm onAddTask={handleAddTask} />
-
           <TaskList
-            taskItems={finalTasks}
+            tasks={displayedTasks}
             onToggleTask={handleToggleTask}
             onEditTask={handleEditTask}
             onDeleteTask={handleRequestDeleteTask}
           />
         </div>
       </section>
-
       {/* Navigation mobile flottante */}
       <nav className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center justify-between rounded-full border border-white/20 bg-white/70 px-6 py-2 shadow-[0px_20px_40px_rgba(25,27,35,0.06)] backdrop-blur-xl md:hidden">
         <a
@@ -308,7 +284,7 @@ export default function Home() {
           <span className="text-[10px] uppercase tracking-widest">Settings</span>
         </a>
       </nav>
-
+      {/* Modale suppression */}
       {pendingDeleteTaskId != null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
@@ -342,7 +318,7 @@ export default function Home() {
           </div>
         </div>
       )}
-
+      {/* Modale édition */}
       {editingTaskId != null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"

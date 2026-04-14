@@ -2,10 +2,12 @@
 
 import { CheckIcon, Pencil, Trash2 } from "lucide-react";
 
+
+// Harmonisation : on utilise les classes Tailwind personnalisées
 const PRIORITY_COLORS = {
-  haute: "bg-red-100 text-red-700",
-  moyenne: "bg-orange-100 text-orange-700",
-  basse: "bg-green-100 text-green-700",
+  haute: "bg-error-container text-error",
+  moyenne: "bg-secondary-container text-on-secondary-container",
+  basse: "bg-primary-container text-on-primary-container",
 };
 
 const PRIORITY_LABELS = {
@@ -25,7 +27,7 @@ const TaskItem = ({
   onDelete,
 }) => (
   <div
-    className={`p-6 bg-surface-container-low rounded-xl flex items-center justify-between hover:bg-surface-container transition-colors group ${
+    className={`p-6 bg-surface-container-low rounded-xl flex items-center justify-between hover:bg-surface-container transition-colors group font-body border border-outline-variant/20 ${
       completed ? "opacity-60" : ""
     }`}
     data-task-id={id}
@@ -36,9 +38,9 @@ const TaskItem = ({
         type="button"
         aria-label={completed ? "Marquer comme non complétée" : "Marquer comme complétée"}
         onClick={() => onToggle?.(id)}
-        className={`w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center cursor-pointer group-hover:border-primary-container ${
+        className={`w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center cursor-pointer group-hover:border-primary-container transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 ${
           completed
-            ? "bg-primary border-primary bg-blue-600 border-blue-600"
+            ? "bg-primary border-primary"
             : "bg-transparent"
         }`}
       >
@@ -54,7 +56,7 @@ const TaskItem = ({
       </button>
       <div>
         <p
-          className={`font-semibold text-on-surface ${
+          className={`font-semibold text-on-surface font-headline ${
             completed ? "line-through" : ""
           }`}
         >

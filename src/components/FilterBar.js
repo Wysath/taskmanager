@@ -21,13 +21,12 @@ const FilterBar = ({ currentFilter, onFilterChange }) => {
               aria-pressed={isActive}
               onClick={() => onFilterChange(filter.value)}
               // PRÉSERVATION STRICTE DES CLASSES DE BASE
-              className={`px-4 py-2 rounded-lg shadow-sm transition-colors
-                font-semibold
+              className={`px-4 py-2 rounded-lg shadow-sm transition-colors font-headline font-semibold border border-outline-variant/20
                 ${
                   isActive
-                    ? "bg-blue-600 text-white"
+                    ? "bg-primary text-on-primary"
                     : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container"
-                }`}
+                } focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2`}
             >
               {filter.label}
             </button>

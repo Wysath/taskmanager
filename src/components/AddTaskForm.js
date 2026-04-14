@@ -26,7 +26,7 @@ const AddTaskForm = ({ onAddTask }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-sm sm:flex-row"
+      className="flex flex-col gap-4 mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-sm sm:flex-row font-body border border-outline-variant/20"
       aria-label="Ajouter une tâche"
       autoComplete="off"
     >
@@ -34,7 +34,7 @@ const AddTaskForm = ({ onAddTask }) => {
         {/* Label visible, accessible pour la navigation clavier/liseuse */}
         <label
           htmlFor="task-title"
-          className="block mb-1 text-on-surface font-medium"
+          className="block mb-1 text-on-surface font-headline font-medium"
         >
           Titre de la tâche
         </label>
@@ -44,7 +44,7 @@ const AddTaskForm = ({ onAddTask }) => {
           value={taskTitle}
           onChange={(event) => setTaskTitle(event.target.value)}
           placeholder="Nouvelle tâche..."
-          className="h-12 w-full rounded-lg border-none bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary-container"
+          className="h-12 w-full rounded-lg border border-outline-variant bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
           required
           aria-required="true"
         />
@@ -54,7 +54,7 @@ const AddTaskForm = ({ onAddTask }) => {
         {/* Label visible pour la priorité */}
         <label
           htmlFor="task-priority"
-          className="block mb-1 text-on-surface font-medium"
+          className="block mb-1 text-on-surface font-headline font-medium"
         >
           Priorité
         </label>
@@ -73,7 +73,7 @@ const AddTaskForm = ({ onAddTask }) => {
 
       <button
         type="submit"
-        className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-primary-container px-8 font-semibold tracking-wide text-white shadow-md transition-all hover:opacity-90"
+         className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full bg-linear-to-r from-primary to-primary-container px-8 font-semibold tracking-wide text-white shadow-md transition-all hover:opacity-90"
         aria-label="Ajouter la tâche"
       >
         {/* L'icône est décorative car le bouton possède du texte */}

@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { signInWithPopup, GoogleAuthProvider, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { initializeApp, getApps } from "firebase/app";
 
-// Reprise stricte de la configuration du fichier src/lib/firebase.js
+// Configuration Firebase via variables d'environnement
 const firebaseConfig = {
-  apiKey: "AIzaSyCAYBr6dmlPjp0RxRo6FxoJCxltg1auhag",
-  authDomain: "taskmanager-filrouge-57492.firebaseapp.com",
-  projectId: "taskmanager-filrouge-57492",
-  storageBucket: "taskmanager-filrouge-57492.firebasestorage.app",
-  messagingSenderId: "529740290484",
-  appId: "1:529740290484:web:7799656e332e2e7ada3ae1"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialisation unique de Firebase côté client

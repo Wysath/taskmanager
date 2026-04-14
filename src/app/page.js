@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Archive,
   Bell,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import AddTaskForm from "../components/AddTaskForm";
 import TaskList from "../components/TaskList";
+import SearchBar from "../components/SearchBar";
 
 const initialTaskItems = [
   {
@@ -40,71 +41,77 @@ const initialTaskItems = [
   },
 ];
 
+
 export default function Home() {
-  const [taskItems, setTaskItems] = useState(initialTaskItems);
-  const [priorityFilter, setPriorityFilter] = useState("toutes");
-  const [statusFilter, setStatusFilter] = useState("toutes");
-  const [sortMode, setSortMode] = useState("recent");
+  // --- États principaux ---
+  const [tasks, setTasks] = useState(initialTaskItems);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // 'all', 'active', 'completed'
+  const [prioritySort, setPrioritySort] = useState("none"); // 'none', 'highToLow', 'lowToHigh'
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [draftTaskTitle, setDraftTaskTitle] = useState("");
   const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState(null);
   const priorityOrder = { haute: 3, moyenne: 2, basse: 1 };
 
-  // Construit la liste visible en fonction des filtres et du tri
-  const visibleTaskItems = useMemo(() => {
-    const filteredTasks = taskItems.filter((taskItem) => {
-      const matchesPriority =
-        priorityFilter === "toutes" || taskItem.priority === priorityFilter;
-      const matchesStatus =
-        statusFilter === "toutes" ||
-        (statusFilter === "actives" && !taskItem.completed) ||
-        (statusFilter === "completees" && taskItem.completed);
-      return matchesPriority && matchesStatus;
+  // --- Logique de filtrage et triage ---
+  //
+  // Calcul de la liste finale à afficher :
+  // 1. Filtrer par texte (recherche)
+  // 2. Filtrer par statut (active/completed)
+  // 3. Trier par priorité
+  //
+  // Cette variable est recalculée à chaque rendu.
+  const filteredAndSortedTasks = tasks
+    // 1. Filtrer par texte (recherche)
+    .filter((task) => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        task.title.toLowerCase().includes(q) ||
+        (task.description && task.description.toLowerCase().includes(q))
+      );
+    })
+    // 2. Filtrer par statut
+    .filter((task) => {
+      if (statusFilter === "all") return true;
+      if (statusFilter === "active") return !task.completed;
+      if (statusFilter === "completed") return task.completed;
+      return true;
     });
 
-    return [...filteredTasks].sort((taskA, taskB) => {
-      if (sortMode === "priority_desc") {
-        return priorityOrder[taskB.priority] - priorityOrder[taskA.priority];
-      }
-      if (sortMode === "priority_asc") {
-        return priorityOrder[taskA.priority] - priorityOrder[taskB.priority];
-      }
-      if (sortMode === "title_asc") {
-        return taskA.title.localeCompare(taskB.title, "fr");
-      }
-      if (sortMode === "title_desc") {
-        return taskB.title.localeCompare(taskA.title, "fr");
-      }
-      return taskB.id - taskA.id;
-    });
-  }, [taskItems, priorityFilter, statusFilter, sortMode]);
+  // 3. Trier par priorité
+  let finalTasks = [...filteredAndSortedTasks];
+  if (prioritySort === "highToLow") {
+    finalTasks.sort((a, b) => priorityOrder[b.priority] - priorityOrder[a.priority]);
+  } else if (prioritySort === "lowToHigh") {
+    finalTasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  }
+
+  // --- Fonctions de gestion ---
 
   // Bascule l'etat complete d'une tache
   const handleToggleTask = (targetTaskId) => {
-    setTaskItems((currentTaskItems) =>
-      currentTaskItems.map((taskItem) =>
-        taskItem.id === targetTaskId
-          ? { ...taskItem, completed: !taskItem.completed }
-          : taskItem
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === targetTaskId ? { ...task, completed: !task.completed } : task
       )
     );
   };
 
   // Supprime une tache de la liste
   const handleDeleteTask = (targetTaskId) => {
-    setTaskItems((currentTaskItems) =>
-      currentTaskItems.filter((taskItem) => taskItem.id !== targetTaskId)
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== targetTaskId)
     );
   };
 
   // Ajoute une nouvelle tache avec titre et priorite
   const handleAddTask = ({ title, priority }) => {
-    setTaskItems((currentTaskItems) => {
+    setTasks((currentTasks) => {
       const nextId =
-        currentTaskItems.length > 0
-          ? Math.max(...currentTaskItems.map((taskItem) => taskItem.id)) + 1
+        currentTasks.length > 0
+          ? Math.max(...currentTasks.map((task) => task.id)) + 1
           : 1;
-
       return [
         {
           id: nextId,
@@ -113,14 +120,14 @@ export default function Home() {
           priority,
           completed: false,
         },
-        ...currentTaskItems,
+        ...currentTasks,
       ];
     });
   };
 
   // Ouvre la modale d'edition
   const handleEditTask = (targetTaskId) => {
-    const targetTask = taskItems.find((taskItem) => taskItem.id === targetTaskId);
+    const targetTask = tasks.find((task) => task.id === targetTaskId);
     if (!targetTask) return;
     setEditingTaskId(targetTaskId);
     setDraftTaskTitle(targetTask.title);
@@ -136,10 +143,9 @@ export default function Home() {
   const handleConfirmEditTask = () => {
     const nextTitle = draftTaskTitle.trim();
     if (!nextTitle || editingTaskId == null) return;
-
-    setTaskItems((currentTaskItems) =>
-      currentTaskItems.map((taskItem) =>
-        taskItem.id === editingTaskId ? { ...taskItem, title: nextTitle } : taskItem
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === editingTaskId ? { ...task, title: nextTitle } : task
       )
     );
     handleCancelEditTask();
@@ -236,7 +242,7 @@ export default function Home() {
         </header>
 
         <div className="mx-auto w-full max-w-5xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
-          <header className="mb-8 flex items-end justify-between">
+          <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h3 className="text-4xl font-extrabold tracking-tight text-on-surface">
                 Mes Tâches
@@ -246,55 +252,36 @@ export default function Home() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <SearchBar value={searchQuery} onChange={setSearchQuery} />
               <div className="flex items-center gap-2 rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
                 <Filter size={18} aria-hidden="true" />
-                <label htmlFor="priority-filter" className="sr-only">
-                  Filtrer par priorité
-                </label>
-                <select
-                  id="priority-filter"
-                  value={priorityFilter}
-                  onChange={(event) => setPriorityFilter(event.target.value)}
-                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
-                >
-                  <option value="toutes">Toutes priorités</option>
-                  <option value="haute">Haute</option>
-                  <option value="moyenne">Moyenne</option>
-                  <option value="basse">Basse</option>
-                </select>
-              </div>
-
-              <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
                 <label htmlFor="status-filter" className="sr-only">
                   Filtrer par statut
                 </label>
                 <select
                   id="status-filter"
                   value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
+                  onChange={(e) => setStatusFilter(e.target.value)}
                   className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
                 >
-                  <option value="toutes">Tous statuts</option>
-                  <option value="actives">Actives</option>
-                  <option value="completees">Complétées</option>
+                  <option value="all">Tous statuts</option>
+                  <option value="active">Actives</option>
+                  <option value="completed">Complétées</option>
                 </select>
               </div>
-
               <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
-                <label htmlFor="sort-mode" className="sr-only">
-                  Mode de tri
+                <label htmlFor="priority-sort" className="sr-only">
+                  Trier par priorité
                 </label>
                 <select
-                  id="sort-mode"
-                  value={sortMode}
-                  onChange={(event) => setSortMode(event.target.value)}
+                  id="priority-sort"
+                  value={prioritySort}
+                  onChange={(e) => setPrioritySort(e.target.value)}
                   className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
                 >
-                  <option value="recent">Plus récentes</option>
-                  <option value="priority_desc">Priorité décroissante</option>
-                  <option value="priority_asc">Priorité croissante</option>
-                  <option value="title_asc">Titre A-Z</option>
-                  <option value="title_desc">Titre Z-A</option>
+                  <option value="none">Sans tri</option>
+                  <option value="highToLow">Priorité décroissante</option>
+                  <option value="lowToHigh">Priorité croissante</option>
                 </select>
               </div>
             </div>
@@ -303,7 +290,7 @@ export default function Home() {
           <AddTaskForm onAddTask={handleAddTask} />
 
           <TaskList
-            taskItems={visibleTaskItems}
+            taskItems={finalTasks}
             onToggleTask={handleToggleTask}
             onEditTask={handleEditTask}
             onDeleteTask={handleRequestDeleteTask}
@@ -315,7 +302,7 @@ export default function Home() {
       <nav className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center justify-between rounded-full border border-white/20 bg-white/70 px-6 py-2 shadow-[0px_20px_40px_rgba(25,27,35,0.06)] backdrop-blur-xl md:hidden">
         <a
           href="#"
-          className="flex flex-col items-center rounded-full bg-gradient-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white"
+          className="flex flex-col items-center rounded-full bg-linear-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white"
         >
           <CheckSquare size={18} aria-hidden="true" />
           <span className="text-[10px] uppercase tracking-widest">Tasks</span>

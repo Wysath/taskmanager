@@ -16,6 +16,7 @@ import {
 import AddTaskForm from "../components/AddTaskForm";
 import TaskList from "../components/TaskList";
 import SearchBar from "../components/SearchBar";
+import FilterBar from "../components/FilterBar";
 
 const initialTaskItems = [
   {
@@ -253,22 +254,7 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <SearchBar value={searchQuery} onChange={setSearchQuery} />
-              <div className="flex items-center gap-2 rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
-                <Filter size={18} aria-hidden="true" />
-                <label htmlFor="status-filter" className="sr-only">
-                  Filtrer par statut
-                </label>
-                <select
-                  id="status-filter"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
-                >
-                  <option value="all">Tous statuts</option>
-                  <option value="active">Actives</option>
-                  <option value="completed">Complétées</option>
-                </select>
-              </div>
+              <FilterBar currentFilter={statusFilter} onFilterChange={setStatusFilter} />
               <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
                 <label htmlFor="priority-sort" className="sr-only">
                   Trier par priorité

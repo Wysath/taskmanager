@@ -19,6 +19,7 @@ import Link from "next/link";
 import AddTaskForm from "../components/AddTaskForm";
 import TaskList from "../components/TaskList";
 import SearchBar from "../components/SearchBar";
+import Dashboard from "../components/Dashboard";
 
 const initialTaskItems = [
   {
@@ -233,6 +234,8 @@ export default function Home() {
         </header>
 
         <div className="mx-auto w-full max-w-5xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
+          {/* Dashboard statistiques */}
+          <Dashboard tasks={tasks} />
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h3 className="text-4xl font-extrabold tracking-tight text-on-surface">
@@ -305,7 +308,7 @@ export default function Home() {
             <a
               href="#"
               aria-label="Voir les tâches"
-              className="flex flex-col items-center rounded-full bg-gradient-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white focus:outline-2 focus:outline-primary"
+              className="flex flex-col items-center rounded-full bg-linear-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white focus:outline-2 focus:outline-primary"
               tabIndex={0}
             >
               <ListChecks size={18} aria-hidden="true" role="img" focusable="false" />
@@ -323,7 +326,7 @@ export default function Home() {
             <a
               href="#"
               aria-label="Paramètres"
-              className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline focus:outline-2 focus:outline-primary"
+              className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline-2 focus:outline-primary"
               tabIndex={0}
             >
               <Settings size={18} aria-hidden="true" role="img" focusable="false" />

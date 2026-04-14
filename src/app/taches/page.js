@@ -1,11 +1,12 @@
-  // Lance l'édition d'une tâche (ouvre la modale d'édition)
+"use client";
+// Lance l'édition d'une tâche (ouvre la modale d'édition)
   const handleEditTask = (targetTaskId) => {
     const targetTask = taskItems.find((task) => task.id === targetTaskId);
     if (!targetTask) return;
     setEditingTaskId(targetTaskId);
     setDraftTaskTitle(targetTask.title);
   };
-"use client";
+
 import { useMemo, useState } from "react";
 import { Filter, ListChecks, User, Archive } from "lucide-react";
 import AddTaskForm from "../../components/AddTaskForm";

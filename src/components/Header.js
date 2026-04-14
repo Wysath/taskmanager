@@ -13,13 +13,13 @@ export default function Header() {
         {/* Menu de navigation fictif */}
         <div className="flex items-center gap-6 text-sm font-medium text-zinc-600">
           <a
-            href="#"
+            href="/"
             className="transition-colors hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
           >
             Accueil
           </a>
           <a
-            href="#"
+            href="/taches"
             className="transition-colors hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
           >
             Tâches

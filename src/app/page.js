@@ -4,15 +4,18 @@ import { useState } from "react";
 import {
   Archive,
   Bell,
-  CalendarDays,
+  Calendar,
   CheckSquare,
-  CircleDot,
+  Circle,
   Filter,
   GitBranch,
-  LayoutDashboard,
-  Search,
+  Home as HomeIcon,
+  ListChecks,
+  User,
   Settings,
+  Search,
 } from "lucide-react";
+import Link from "next/link";
 import AddTaskForm from "../components/AddTaskForm";
 import TaskList from "../components/TaskList";
 import SearchBar from "../components/SearchBar";
@@ -155,50 +158,50 @@ export default function Home() {
       <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col gap-4 border-r border-outline-variant/10 bg-surface-container py-8 md:flex">
         <div className="mb-8 px-8">
           <h1 className="text-xl font-extrabold tracking-tight text-primary">
-            The Executive
+            Tableau de bord
           </h1>
           <p className="text-xs uppercase tracking-wide text-on-surface-variant/70">
-            Productivity Portal
+            Portail de productivité
           </p>
         </div>
 
         <nav className="flex flex-col gap-1 pr-4" aria-label="Navigation principale latérale">
-          <a
-            href="#"
-            className="flex items-center gap-4 rounded-r-full bg-surface-container-lowest px-8 py-3 font-semibold text-primary transition-all duration-300 focus:outline focus:outline-2 focus:outline-primary"
+          <Link
+            href="/"
+            className="flex items-center gap-4 rounded-r-full bg-surface-container-lowest px-8 py-3 font-semibold text-primary transition-all duration-300 focus:outline-2 focus:outline-primary"
             tabIndex={0}
-            aria-label="Accueil Sanctuary"
+            aria-label="Accueil"
           >
-            <LayoutDashboard size={18} aria-hidden="true" role="img" focusable="false" />
-            <span className="text-sm">Sanctuary</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline focus:outline-2 focus:outline-primary"
+            <HomeIcon size={18} aria-hidden="true" role="img" focusable="false" />
+            <span className="text-sm">Accueil</span>
+          </Link>
+          <Link
+            href="/taches"
+            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline-2 focus:outline-primary"
             tabIndex={0}
-            aria-label="Projets"
+            aria-label="Tâches"
           >
-            <GitBranch size={18} aria-hidden="true" role="img" focusable="false" />
-            <span className="text-sm">Projects</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline focus:outline-2 focus:outline-primary"
+            <ListChecks size={18} aria-hidden="true" role="img" focusable="false" />
+            <span className="text-sm">Tâches</span>
+          </Link>
+          <Link
+            href="/profil"
+            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline-2 focus:outline-primary"
             tabIndex={0}
-            aria-label="Focus"
+            aria-label="Profil"
           >
-            <CircleDot size={18} aria-hidden="true" role="img" focusable="false" />
-            <span className="text-sm">Focus</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline focus:outline-2 focus:outline-primary"
+            <User size={18} aria-hidden="true" role="img" focusable="false" />
+            <span className="text-sm">Profil</span>
+          </Link>
+          <Link
+            href="/"
+            className="flex items-center gap-4 px-8 py-3 text-on-surface-variant transition-transform duration-300 hover:translate-x-1 focus:outline-2 focus:outline-primary"
             tabIndex={0}
-            aria-label="Archive"
+            aria-label="Archives"
           >
             <Archive size={18} aria-hidden="true" role="img" focusable="false" />
-            <span className="text-sm">Archive</span>
-          </a>
+            <span className="text-sm">Archives</span>
+          </Link>
         </nav>
       </aside>
 
@@ -207,18 +210,18 @@ export default function Home() {
         <header className="sticky top-16 z-30 w-full bg-surface">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold tracking-tight text-on-surface">
-              Executive Flow
+              Mes tâches
             </h2>
             <div className="flex items-center gap-4">
               <button
-                className="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus:outline focus:outline-2 focus:outline-primary"
+                className="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus:outline-2 focus:outline-primary"
                 type="button"
                 aria-label="Afficher le calendrier"
               >
-                <CalendarDays size={20} aria-hidden="true" role="img" focusable="false" />
+                <Calendar size={20} aria-hidden="true" role="img" focusable="false" />
               </button>
               <button
-                className="relative rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus:outline focus:outline-2 focus:outline-primary"
+                className="relative rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container focus:outline-2 focus:outline-primary"
                 type="button"
                 aria-label="Afficher les notifications"
               >
@@ -254,7 +257,7 @@ export default function Home() {
                   id="status-filter"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline focus:outline-2 focus:outline-primary"
+                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-2 focus:outline-primary"
                   aria-label="Filtrer par statut"
                 >
                   <option value="all">Tous statuts</option>
@@ -270,7 +273,7 @@ export default function Home() {
                   id="priority-sort"
                   value={prioritySort}
                   onChange={(e) => setPrioritySort(e.target.value)}
-                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline focus:outline-2 focus:outline-primary"
+                  className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-2 focus:outline-primary"
                   aria-label="Trier par priorité"
                 >
                   <option value="none">Sans tri</option>
@@ -294,39 +297,39 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Navigation mobile flottante */}
-      <nav
-        className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center justify-between rounded-full border border-white/20 bg-white/90 px-6 py-2 shadow-[0px_20px_40px_rgba(25,27,35,0.08)] backdrop-blur-xl md:hidden"
-        aria-label="Navigation mobile principale"
-      >
-        <a
-          href="#"
-          aria-label="Voir les tâches"
-          className="flex flex-col items-center rounded-full bg-gradient-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white focus:outline focus:outline-2 focus:outline-primary"
-          tabIndex={0}
-        >
-          <CheckSquare size={18} aria-hidden="true" role="img" focusable="false" />
-          <span className="text-[10px] uppercase tracking-widest">Tasks</span>
-        </a>
-        <a
-          href="#"
-          aria-label="Rechercher"
-          className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline focus:outline-2 focus:outline-primary"
-          tabIndex={0}
-        >
-          <Search size={18} aria-hidden="true" role="img" focusable="false" />
-          <span className="text-[10px] uppercase tracking-widest">Search</span>
-        </a>
-        <a
-          href="#"
-          aria-label="Paramètres"
-          className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline focus:outline-2 focus:outline-primary"
-          tabIndex={0}
-        >
-          <Settings size={18} aria-hidden="true" role="img" focusable="false" />
-          <span className="text-[10px] uppercase tracking-widest">Settings</span>
-        </a>
-      </nav>
+          {/* Navigation mobile flottante */}
+          <nav
+            className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center justify-between rounded-full border border-white/20 bg-white/90 px-6 py-2 shadow-[0px_20px_40px_rgba(25,27,35,0.08)] backdrop-blur-xl md:hidden"
+            aria-label="Navigation mobile principale"
+          >
+            <a
+              href="#"
+              aria-label="Voir les tâches"
+              className="flex flex-col items-center rounded-full bg-gradient-to-r from-[#003d9b] to-[#0052cc] px-4 py-1 text-white focus:outline-2 focus:outline-primary"
+              tabIndex={0}
+            >
+              <ListChecks size={18} aria-hidden="true" role="img" focusable="false" />
+              <span className="text-[10px] uppercase tracking-widest">Tâches</span>
+            </a>
+            <a
+              href="#"
+              aria-label="Recherche"
+              className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline-2 focus:outline-primary"
+              tabIndex={0}
+            >
+              <Search size={18} aria-hidden="true" role="img" focusable="false" />
+              <span className="text-[10px] uppercase tracking-widest">Recherche</span>
+            </a>
+            <a
+              href="#"
+              aria-label="Paramètres"
+              className="ml-4 flex flex-col items-center text-on-surface-variant transition-all hover:opacity-80 focus:outline focus:outline-2 focus:outline-primary"
+              tabIndex={0}
+            >
+              <Settings size={18} aria-hidden="true" role="img" focusable="false" />
+              <span className="text-[10px] uppercase tracking-widest">Paramètres</span>
+            </a>
+          </nav>
 
       {pendingDeleteTaskId != null && (
         <div
@@ -346,14 +349,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleCancelDeleteTask}
-                className="rounded-lg border border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
+                className="rounded-lg border border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 focus:outline-2 focus:outline-primary cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteTask}
-                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
+                className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 focus:outline-2 focus:outline-primary cursor-pointer"
               >
                 Supprimer
               </button>
@@ -398,13 +401,13 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleCancelEditTask}
-                  className="rounded-lg border border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
+                  className="rounded-lg border border-zinc-400 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 focus:outline-2 focus:outline-primary cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline focus:outline-2 focus:outline-primary cursor-pointer"
+                  className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline-2 focus:outline-primary cursor-pointer"
                 >
                   Enregistrer
                 </button>

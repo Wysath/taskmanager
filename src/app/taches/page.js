@@ -1,6 +1,13 @@
+  // Lance l'édition d'une tâche (ouvre la modale d'édition)
+  const handleEditTask = (targetTaskId) => {
+    const targetTask = taskItems.find((task) => task.id === targetTaskId);
+    if (!targetTask) return;
+    setEditingTaskId(targetTaskId);
+    setDraftTaskTitle(targetTask.title);
+  };
 "use client";
 import { useMemo, useState } from "react";
-import { Filter } from "lucide-react";
+import { Filter, ListChecks, User, Archive } from "lucide-react";
 import AddTaskForm from "../../components/AddTaskForm";
 import TaskList from "../../components/TaskList";
 
@@ -94,7 +101,6 @@ export default function TachesPage() {
         currentTaskItems.length > 0
           ? Math.max(...currentTaskItems.map((taskItem) => taskItem.id)) + 1
           : 1;
-
       return [
         {
           id: nextId,
@@ -106,20 +112,6 @@ export default function TachesPage() {
         ...currentTaskItems,
       ];
     });
-  };
-
-  // Ouvre la modale d'edition
-  const handleEditTask = (targetTaskId) => {
-    const targetTask = taskItems.find((taskItem) => taskItem.id === targetTaskId);
-    if (!targetTask) return;
-    setEditingTaskId(targetTaskId);
-    setDraftTaskTitle(targetTask.title);
-  };
-
-  // Annule l'edition en cours
-  const handleCancelEditTask = () => {
-    setEditingTaskId(null);
-    setDraftTaskTitle("");
   };
 
   // Confirme l'edition du titre

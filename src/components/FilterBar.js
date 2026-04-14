@@ -20,11 +20,14 @@ const FilterBar = ({ currentFilter, onFilterChange }) => {
               type="button"
               aria-pressed={isActive}
               onClick={() => onFilterChange(filter.value)}
-              className={
-                isActive
-                  ? "bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors"
-                  : "bg-surface-container-high text-on-surface-variant px-4 py-2 rounded-lg hover:bg-surface-container transition-colors"
-              }
+              // PRÉSERVATION STRICTE DES CLASSES DE BASE
+              className={`px-4 py-2 rounded-lg shadow-sm transition-colors
+                font-semibold
+                ${
+                  isActive
+                    ? "bg-blue-600 text-white"
+                    : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container"
+                }`}
             >
               {filter.label}
             </button>

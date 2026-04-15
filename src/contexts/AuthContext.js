@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
   signOut as firebaseSignOut,
 } from "firebase/auth";
+import { createOrUpdateUserProfile } from "@/services/userService";
 
 function translateFirebaseError(error) {
   if (!error?.code) return "Une erreur est survenue. Veuillez réessayer.";
@@ -42,7 +43,15 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     setLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser && currentUser.email) {
+        // Crée/met à jour le profil Firestore pour l'utilisateur connecté
+        try {
+          await createOrUpdateUserProfile(currentUser.uid, currentUser.email);
+        } catch (err) {
+          console.error("[AuthContext] Erreur création profil:", err);
+        }
+      }
       setUser(currentUser);
       setLoading(false);
     }, (err) => {
@@ -55,7 +64,8 @@ export function AuthProvider({ children }) {
   const signUp = async (email, password) => {
     setError(null);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await createOrUpdateUserProfile(userCredential.user.uid, email);
     } catch (err) {
       setError(translateFirebaseError(err));
       throw err;
@@ -65,7 +75,9 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Crée/met à jour le profil lors du login
+      await createOrUpdateUserProfile(userCredential.user.uid, userCredential.user.email);
     } catch (err) {
       setError(translateFirebaseError(err));
       throw err;
@@ -75,7 +87,9 @@ export function AuthProvider({ children }) {
   const signInWithGoogle = async () => {
     setError(null);
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      const userCredential = await signInWithPopup(auth, new GoogleAuthProvider());
+      // Crée/met à jour le profil pour Google Auth
+      await createOrUpdateUserProfile(userCredential.user.uid, userCredential.user.email);
     } catch (err) {
       setError(translateFirebaseError(err));
       throw err;

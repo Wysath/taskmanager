@@ -25,6 +25,7 @@ const TaskItem = ({
   onToggle,
   onEdit,
   onDelete,
+  addedBy,
 }) => (
   <div
     className={`p-6 bg-surface-container-low rounded-xl flex items-center justify-between hover:bg-surface-container transition-colors group font-body border border-outline-variant/20 ${
@@ -64,6 +65,9 @@ const TaskItem = ({
         </p>
         {description && (
           <p className="text-sm text-on-surface-variant">{description}</p>
+        )}
+        {addedBy && (
+          <p className="text-xs text-on-surface-variant mt-1">Ajoutée par : {addedBy}</p>
         )}
         <span
           className={`text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded

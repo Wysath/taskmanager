@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { createOrUpdateUserProfile } from "@/services/userService";
 
 const RegisterPage = () => {
   const router = useRouter();
@@ -12,11 +13,6 @@ const RegisterPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-
-  // For Material Symbols support
-  // eslint-disable-next-line @next/next/no-head-element
-  // NOTE: Use next/head in a layout if needed for production.
-  // Here, style and link tags added directly for demo purpose as per HTML.
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -26,7 +22,8 @@ const RegisterPage = () => {
       return;
     }
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await createOrUpdateUserProfile(userCredential.user.uid, email);
       router.push("/");
     } catch (err) {
       setError(err.message);

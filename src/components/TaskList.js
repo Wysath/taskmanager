@@ -77,6 +77,7 @@ const TaskList = ({
                     onToggle={handleToggle}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
+                    addedBy={task.addedBy}
                   />
                 )}
 

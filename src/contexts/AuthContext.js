@@ -11,7 +11,6 @@ import {
   signOut as firebaseSignOut,
 } from "firebase/auth";
 
-// Traduction des erreurs Firebase en français
 function translateFirebaseError(error) {
   if (!error?.code) return "Une erreur est survenue. Veuillez réessayer.";
   switch (error.code) {
@@ -29,10 +28,6 @@ function translateFirebaseError(error) {
       return "Trop de tentatives. Réessayez plus tard.";
     case "auth/invalid-credential":
       return "Identifiants invalides. Vérifiez votre e-mail et mot de passe.";
-    case "auth/popup-closed-by-user":
-      return "La fenêtre de connexion a été fermée.";
-    case "auth/network-request-failed":
-      return "Problème de connexion réseau.";
     default:
       return "Une erreur est survenue. Veuillez réessayer.";
   }
@@ -57,7 +52,6 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  // Inscription email/mot de passe
   const signUp = async (email, password) => {
     setError(null);
     try {
@@ -68,7 +62,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Connexion email/mot de passe
   const signIn = async (email, password) => {
     setError(null);
     try {
@@ -79,7 +72,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Connexion Google
   const signInWithGoogle = async () => {
     setError(null);
     try {
@@ -90,8 +82,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Déconnexion
-  const signOut = async () => {
+  const logOut = async () => {
     setError(null);
     try {
       await firebaseSignOut(auth);
@@ -103,7 +94,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, signUp, signIn, signInWithGoogle, signOut }}
+      value={{ user, loading, error, signUp, signIn, signInWithGoogle, logOut }}
     >
       {children}
     </AuthContext.Provider>

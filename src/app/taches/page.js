@@ -1,56 +1,153 @@
 "use client";
-// Lance l'édition d'une tâche (ouvre la modale d'édition)
-  const handleEditTask = (targetTaskId) => {
-    const targetTask = taskItems.find((task) => task.id === targetTaskId);
-    if (!targetTask) return;
-    setEditingTaskId(targetTaskId);
-    setDraftTaskTitle(targetTask.title);
-  };
 
-import { useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import {
+  subscribeToTasks,
+  addTask,
+  updateTask,
+  deleteTask,
+} from "@/services/rtdbTaskService";
+import { useMemo } from "react";
 import { Filter, ListChecks, User, Archive } from "lucide-react";
 import AddTaskForm from "../../components/AddTaskForm";
 import TaskList from "../../components/TaskList";
 
-// Données de test initiales pour la page tâches
-const initialTaskItems = [
-  {
-    id: 1,
-    title: "Préparer la réunion produit",
-    description: "Rassembler les points clés du sprint",
-    priority: "haute",
-    completed: false,
-  },
-  {
-    id: 2,
-    title: "Réviser les tickets en cours",
-    description: "Valider les priorités avec l'équipe",
-    priority: "moyenne",
-    completed: false,
-  },
-  {
-    id: 3,
-    title: "Envoyer le compte-rendu",
-    description: "Partager le document à toute l'équipe",
-    priority: "basse",
-    completed: true,
-  },
-];
-
 export default function TachesPage() {
-  const [taskItems, setTaskItems] = useState(initialTaskItems);
+  const { user, loading, logOut } = useAuth();
+  const router = useRouter();
+  const [tasks, setTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [error, setError] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("toutes");
   const [statusFilter, setStatusFilter] = useState("toutes");
   const [sortMode, setSortMode] = useState("recent");
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [draftTaskTitle, setDraftTaskTitle] = useState("");
   const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState(null);
-  const totalTasks = taskItems.length;
-  const priorityOrder = { haute: 3, moyenne: 2, basse: 1 };
+  const priorityOrder = { haute: 3, moyenne: 2, basse: 1, medium: 2 };
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [loading, user, router]);
+
+  useEffect(() => {
+    // Synchronisation Firestore temps réel des tâches de l'utilisateur
+    if (!user) {
+      setTasks([]);
+      return;
+    }
+    setTasksLoading(true);
+    setError("");
+    // On écoute la collection users/${user.uid}/tasks
+    const unsubscribe = subscribeToTasks(user.uid, (tasks, errMsg) => {
+      if (errMsg) {
+        setError(errMsg);
+        setTasks([]);
+        setTasksLoading(false);
+        console.error("Erreur Firestore:", errMsg);
+        return;
+      }
+      setTasks(tasks);
+      setTasksLoading(false);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // Tous les hooks doivent être déclarés AVANT tout return ou logique conditionnelle
+  const handleAddTask = useCallback(
+    async ({ title, priority }) => {
+      if (!user?.uid) {
+        setError("Utilisateur non authentifié : impossible d'ajouter la tâche.");
+        console.error("[handleAddTask] user.uid absent, tâche non ajoutée");
+        return;
+      }
+      setError("");
+      try {
+        await addTask(user.uid, { title, priority });
+      } catch (err) {
+        setError("Erreur Firestore : " + (err?.message || err));
+        console.error("[handleAddTask] Erreur Firestore:", err);
+      }
+    },
+    [user]
+  );
+
+  const handleToggleTask = useCallback(
+    async (targetTaskId) => {
+      if (!user?.uid) return;
+      setError("");
+      try {
+        const task = tasks.find((t) => t.id === targetTaskId);
+        if (!task) return;
+        await updateTask(user.uid, task.id, { completed: !task.completed });
+      } catch (err) {
+        setError(err.message);
+      }
+    },
+    [user, tasks]
+  );
+
+  const handleDeleteTask = useCallback(
+    async (targetTaskId) => {
+      if (!user?.uid) return;
+      setError("");
+      try {
+        await deleteTask(user.uid, targetTaskId);
+      } catch (err) {
+        setError(err.message);
+      }
+    },
+    [user]
+  );
+
+  const handleEditTask = (targetTaskId) => {
+    const targetTask = tasks.find((task) => task.id === targetTaskId);
+    if (!targetTask) return;
+    setEditingTaskId(targetTaskId);
+    setDraftTaskTitle(targetTask.title);
+  };
+
+  const handleCancelEditTask = () => {
+    setEditingTaskId(null);
+    setDraftTaskTitle("");
+  };
+
+  const handleConfirmEditTask = async () => {
+    if (!user?.uid) return;
+    const nextTitle = draftTaskTitle.trim();
+    if (!nextTitle || editingTaskId == null) return;
+    setError("");
+    try {
+      await updateTask(user.uid, editingTaskId, { title: nextTitle });
+      handleCancelEditTask();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleRequestDeleteTask = (targetTaskId) => {
+    setPendingDeleteTaskId(targetTaskId);
+  };
+
+  const handleCancelDeleteTask = () => {
+    setPendingDeleteTaskId(null);
+  };
+
+  const handleConfirmDeleteTask = async () => {
+    if (pendingDeleteTaskId == null) return;
+    await handleDeleteTask(pendingDeleteTaskId);
+    setPendingDeleteTaskId(null);
+  };
+
+  const totalTasks = tasks.length;
 
   // Construit la liste visible avec filtre et tri
   const visibleTaskItems = useMemo(() => {
-    const filteredTasks = taskItems.filter((taskItem) => {
+    const filteredTasks = tasks.filter((taskItem) => {
       const matchesPriority =
         priorityFilter === "toutes" || taskItem.priority === priorityFilter;
       const matchesStatus =
@@ -73,77 +170,22 @@ export default function TachesPage() {
       if (sortMode === "title_desc") {
         return taskB.title.localeCompare(taskA.title, "fr");
       }
-      return taskB.id - taskA.id;
+      return (taskB.createdAt?.seconds || 0) - (taskA.createdAt?.seconds || 0);
     });
-  }, [taskItems, priorityFilter, statusFilter, sortMode]);
+  }, [tasks, priorityFilter, statusFilter, sortMode]);
 
-  // Bascule l'état completed d'une tâche
-  const handleToggleTask = (targetTaskId) => {
-    setTaskItems((currentTaskItems) =>
-      currentTaskItems.map((taskItem) =>
-        taskItem.id === targetTaskId
-          ? { ...taskItem, completed: !taskItem.completed }
-          : taskItem
-      )
+  if (loading || tasksLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-lg text-on-surface-variant bg-surface">
+        Chargement...
+      </div>
     );
-  };
+  }
 
-  // Supprime la tâche ciblée du tableau
-  const handleDeleteTask = (targetTaskId) => {
-    setTaskItems((currentTaskItems) =>
-      currentTaskItems.filter((taskItem) => taskItem.id !== targetTaskId)
-    );
-  };
-
-  // Ajoute une nouvelle tache
-  const handleAddTask = ({ title, priority }) => {
-    setTaskItems((currentTaskItems) => {
-      const nextId =
-        currentTaskItems.length > 0
-          ? Math.max(...currentTaskItems.map((taskItem) => taskItem.id)) + 1
-          : 1;
-      return [
-        {
-          id: nextId,
-          title,
-          description: "",
-          priority,
-          completed: false,
-        },
-        ...currentTaskItems,
-      ];
-    });
-  };
-
-  // Confirme l'edition du titre
-  const handleConfirmEditTask = () => {
-    const nextTitle = draftTaskTitle.trim();
-    if (!nextTitle || editingTaskId == null) return;
-
-    setTaskItems((currentTaskItems) =>
-      currentTaskItems.map((taskItem) =>
-        taskItem.id === editingTaskId ? { ...taskItem, title: nextTitle } : taskItem
-      )
-    );
-    handleCancelEditTask();
-  };
-
-  // Ouvre la modale de confirmation de suppression
-  const handleRequestDeleteTask = (targetTaskId) => {
-    setPendingDeleteTaskId(targetTaskId);
-  };
-
-  // Annule la suppression
-  const handleCancelDeleteTask = () => {
-    setPendingDeleteTaskId(null);
-  };
-
-  // Confirme puis supprime la tâche
-  const handleConfirmDeleteTask = () => {
-    if (pendingDeleteTaskId == null) return;
-    handleDeleteTask(pendingDeleteTaskId);
-    setPendingDeleteTaskId(null);
-  };
+  if (!user) {
+    // On laisse la redirection faire son effet, on n'affiche rien
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 sm:px-6 lg:px-8">
@@ -154,6 +196,12 @@ export default function TachesPage() {
             Retrouvez vos tâches du jour ({totalTasks} au total).
           </p>
         </header>
+
+        {error && (
+          <div className="mb-4 p-4 bg-error-container text-error rounded-lg font-medium">
+            {error}
+          </div>
+        )}
 
         {/* Liste des tâches affichée via TaskList */}
         <section aria-label="Liste des tâches" role="list">
@@ -203,98 +251,31 @@ export default function TachesPage() {
                 onChange={(event) => setSortMode(event.target.value)}
                 className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
               >
-                <option value="recent">Plus récentes</option>
-                <option value="priority_desc">Priorité décroissante</option>
-                <option value="priority_asc">Priorité croissante</option>
-                <option value="title_asc">Titre A-Z</option>
-                <option value="title_desc">Titre Z-A</option>
+                <option value="recent">Plus récent</option>
+                <option value="priority_desc">Priorité haute → basse</option>
+                <option value="priority_asc">Priorité basse → haute</option>
+                <option value="title_asc">Titre A → Z</option>
+                <option value="title_desc">Titre Z → A</option>
               </select>
             </div>
           </div>
+
           <TaskList
-            taskItems={visibleTaskItems}
-            onToggleTask={handleToggleTask}
-            onEditTask={handleEditTask}
-            onDeleteTask={handleRequestDeleteTask}
+            tasks={visibleTaskItems}
+            onToggle={handleToggleTask}
+            onEdit={handleEditTask}
+            onDelete={handleRequestDeleteTask}
+            editingTaskId={editingTaskId}
+            draftTaskTitle={draftTaskTitle}
+            onDraftChange={setDraftTaskTitle}
+            onEditCancel={handleCancelEditTask}
+            onEditConfirm={handleConfirmEditTask}
+            pendingDeleteTaskId={pendingDeleteTaskId}
+            onDeleteCancel={handleCancelDeleteTask}
+            onDeleteConfirm={handleConfirmDeleteTask}
           />
         </section>
       </section>
-
-      {pendingDeleteTaskId != null && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Confirmation de suppression"
-        >
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h4 className="text-lg font-bold text-zinc-900">
-              Supprimer cette tâche ?
-            </h4>
-            <p className="mt-2 text-sm text-zinc-600">
-              Cette action est irréversible. Voulez-vous continuer ?
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCancelDeleteTask}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteTask}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 cursor-pointer"
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editingTaskId != null && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Modification de tâche"
-        >
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h4 className="text-lg font-bold text-zinc-900">
-              Modifier la tâche
-            </h4>
-            <label htmlFor="edit-task-title" className="mt-3 block text-sm text-zinc-600">
-              Nouveau titre
-            </label>
-            <input
-              id="edit-task-title"
-              type="text"
-              value={draftTaskTitle}
-              onChange={(event) => setDraftTaskTitle(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Saisissez un titre"
-            />
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCancelEditTask}
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmEditTask}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer"
-              >
-                Enregistrer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

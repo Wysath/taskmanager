@@ -34,29 +34,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <>
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-          rel="stylesheet"
-        />
-        <style>{`
-          body { font-family: 'Inter', sans-serif; }
-          h1, h2, h3 { font-family: 'Manrope', sans-serif; }
-          .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-          }
-          .glass-effect {
-            background: rgba(250, 248, 255, 0.7);
-            backdrop-filter: blur(20px);
-          }
-        `}</style>
-      </head>
-      <body className="bg-background text-on-surface min-h-screen flex flex-col">
+    <div className="bg-background text-on-surface min-h-screen flex flex-col">
         {/* TopAppBar suppression as per "Destination" Rule for Transactional pages */}
         <main className="flex-grow flex items-center justify-center p-6 relative overflow-hidden">
           {/* Abstract Background Elements (Architectural Sanctuary Style) */}
@@ -162,19 +140,17 @@ const RegisterPage = () => {
                   type="submit"
                 >
                   S&apos;inscrire
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline-2 focus:outline-primary cursor-pointer"
-                >
-                  Créer mon compte
                 </button>
+                <p className="text-center text-on-surface-variant text-sm mt-4">
+                  Vous avez déjà un compte?{" "}
+                  <Link
                     href="/login"
                     className="text-primary font-bold hover:underline ml-1"
                   >
                     Se connecter
                   </Link>
                 </p>
-              </div>
+              </form>
             </div>
             {/* Trust Indicator */}
             <div className="mt-8 flex justify-center items-center gap-6 opacity-40">
@@ -229,9 +205,8 @@ const RegisterPage = () => {
             </div>
           </div>
         </footer>
-      </body>
-    </>
-  );
-};
+      </div>
+    );
+  };
 
 export default RegisterPage;

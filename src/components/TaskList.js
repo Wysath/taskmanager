@@ -2,25 +2,112 @@
 import { CheckSquare2 } from "lucide-react";
 import TaskItem from "./TaskItem";
 
-const TaskList = ({ taskItems = [], onToggleTask, onEditTask, onDeleteTask }) => {
+const TaskList = ({
+  tasks = [],
+  taskItems,
+  onToggle,
+  onToggleTask,
+  onEdit,
+  onEditTask,
+  onDelete,
+  onDeleteTask,
+  editingTaskId,
+  draftTaskTitle,
+  onDraftChange,
+  onEditCancel,
+  onEditConfirm,
+  pendingDeleteTaskId,
+  onDeleteCancel,
+  onDeleteConfirm,
+}) => {
+  // Support both 'tasks' and 'taskItems' prop names for compatibility
+  const taskList = tasks && tasks.length > 0 ? tasks : (taskItems || []);
+  // Support both callback names for compatibility
+  const handleToggle = onToggle || onToggleTask;
+  const handleEdit = onEdit || onEditTask;
+  const handleDelete = onDelete || onDeleteTask;
+
   return (
     <>
-      {taskItems.length > 0 ? (
+      {taskList.length > 0 ? (
         // Section tâches actives
         <section aria-label="Liste des tâches">
           <div className="flex flex-col gap-4 font-body">
-            {taskItems.map((taskItem) => (
-              <TaskItem
-                key={taskItem.id}
-                id={taskItem.id}
-                title={taskItem.title}
-                description={taskItem.description}
-                priority={taskItem.priority}
-                completed={taskItem.completed}
-                onToggle={onToggleTask}
-                onEdit={onEditTask}
-                onDelete={onDeleteTask}
-              />
+            {taskList.map((task) => (
+              <div key={task.id}>
+                {/* Mode édition */}
+                {editingTaskId === task.id && (
+                  <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/20 mb-4">
+                    <label className="block text-sm font-semibold text-on-surface mb-2">
+                      Modifier le titre
+                    </label>
+                    <input
+                      type="text"
+                      value={draftTaskTitle}
+                      onChange={(e) => onDraftChange?.(e.target.value)}
+                      className="w-full mb-3 px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-highest text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={onEditConfirm}
+                        className="px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold hover:bg-primary/90 transition-colors"
+                      >
+                        Confirmer
+                      </button>
+                      <button
+                        onClick={onEditCancel}
+                        className="px-4 py-2 rounded-lg bg-surface-container-high text-on-surface font-semibold hover:bg-surface-container transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TaskItem affiché normalement */}
+                {editingTaskId !== task.id && (
+                  <TaskItem
+                    key={task.id}
+                    id={task.id}
+                    title={task.title}
+                    description={task.description}
+                    priority={task.priority}
+                    completed={task.completed}
+                    onToggle={handleToggle}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                )}
+
+                {/* Modale de confirmation de suppression */}
+                {pendingDeleteTaskId === task.id && (
+                  <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                    <div className="bg-surface rounded-2xl p-6 max-w-sm mx-4 border border-outline-variant/20 shadow-xl">
+                      <h2 className="text-lg font-bold text-on-surface mb-2">
+                        Supprimer cette tâche ?
+                      </h2>
+                      <p className="text-on-surface-variant mb-4">
+                        Cette action ne peut pas être annulée.
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={onDeleteConfirm}
+                          className="flex-1 px-4 py-2 rounded-lg bg-error text-on-error font-semibold hover:bg-error/90 transition-colors"
+                        >
+                          Supprimer
+                        </button>
+                        <button
+                          onClick={onDeleteCancel}
+                          className="flex-1 px-4 py-2 rounded-lg bg-surface-container-high text-on-surface font-semibold hover:bg-surface-container transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </section>

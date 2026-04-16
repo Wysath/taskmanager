@@ -1,0 +1,194 @@
+/* ============================================
+   SHARED LISTS - Styles pour les listes partagées
+   ============================================ */
+
+/* Conteneur liste partagée */
+.shared-list-view {
+  @apply max-w-2xl mx-auto w-full bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/20 p-6 mt-6 font-body;
+}
+
+.shared-list-header {
+  @apply flex items-center gap-2 mb-4 text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
+}
+
+.shared-list-title {
+  @apply text-2xl font-bold text-on-surface mb-2;
+}
+
+/* Membres */
+.members-section {
+  @apply mb-6;
+}
+
+.members-title {
+  @apply text-lg font-semibold text-on-surface-variant mb-2;
+}
+
+.members-list {
+  @apply flex flex-wrap gap-2 mb-2;
+}
+
+.member-tag {
+  @apply flex items-center gap-2 bg-surface-container-high px-3 py-1 rounded-full text-sm;
+}
+
+.member-email {
+  @apply truncate;
+}
+
+.member-owner-badge {
+  @apply ml-1 px-2 py-0.5 rounded bg-primary text-on-primary text-xs font-bold uppercase;
+}
+
+.member-remove-btn {
+  @apply ml-1 p-1 rounded-full hover:bg-error/10 text-error focus:outline-none focus-visible:ring-2 focus-visible:ring-error-container;
+}
+
+/* Formulaire d'invitation */
+.invite-section {
+  @apply mt-2;
+}
+
+.invite-form-group {
+  @apply flex gap-2 items-center flex-wrap;
+}
+
+.invite-input {
+  @apply px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-highest text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container;
+}
+
+.invite-btn {
+  @apply flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold hover:bg-primary/90 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
+}
+
+.invite-error {
+  @apply text-error text-sm ml-2;
+}
+
+/* Tâches partagées */
+.shared-tasks-section {
+  @apply mb-6;
+}
+
+.shared-tasks-title {
+  @apply text-lg font-semibold text-on-surface-variant mb-2;
+}
+
+.shared-tasks-list {
+  @apply flex flex-col gap-4 font-body;
+}
+
+.shared-task-item {
+  @apply p-6 bg-surface-container-low rounded-xl flex items-center justify-between hover:bg-surface-container transition-colors group border border-outline-variant/20;
+}
+
+.shared-task-item.completed {
+  @apply opacity-60;
+}
+
+.shared-task-content {
+  @apply flex items-center gap-4;
+}
+
+.shared-task-checkbox {
+  @apply w-6 h-6 rounded-md border-2 border-outline-variant flex items-center justify-center cursor-pointer group-hover:border-primary-container transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
+}
+
+.shared-task-checkbox.completed {
+  @apply bg-primary border-primary;
+}
+
+.shared-task-info {
+  @apply flex-1;
+}
+
+.shared-task-title {
+  @apply font-semibold text-on-surface font-headline;
+}
+
+.shared-task-description {
+  @apply text-sm text-on-surface-variant;
+}
+
+.shared-task-addedby {
+  @apply text-xs text-on-surface-variant mt-1;
+}
+
+.shared-task-priority {
+  @apply text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded;
+}
+
+.shared-task-status {
+  @apply text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded;
+}
+
+.shared-task-actions {
+  @apply flex items-center gap-3 opacity-100 transition-opacity;
+}
+
+.shared-task-btn {
+  @apply p-2 text-outline hover:text-primary transition-colors cursor-pointer;
+}
+
+.shared-task-btn-delete {
+  @apply p-2 text-outline hover:text-error transition-colors cursor-pointer;
+}
+
+/* Édition de tâche */
+.task-edit-form {
+  @apply p-4 bg-surface-container-low rounded-xl border border-outline-variant/20 mb-4;
+}
+
+.task-edit-label {
+  @apply block text-sm font-semibold text-on-surface mb-2;
+}
+
+.task-edit-input {
+  @apply w-full mb-3 px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-highest text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+}
+
+.task-edit-buttons {
+  @apply flex gap-2;
+}
+
+.task-edit-confirm {
+  @apply px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold hover:bg-primary/90 transition-colors;
+}
+
+.task-edit-cancel {
+  @apply px-4 py-2 rounded-lg bg-surface-container-high text-on-surface font-semibold hover:bg-surface-container transition-colors;
+}
+
+/* Modale de suppression */
+.delete-confirmation {
+  @apply fixed inset-0 flex items-center justify-center bg-black/50 z-50;
+}
+
+.delete-modal {
+  @apply bg-surface rounded-2xl p-6 max-w-sm mx-4 border border-outline-variant/20 shadow-xl;
+}
+
+.delete-modal-title {
+  @apply text-lg font-bold text-on-surface mb-2;
+}
+
+.delete-modal-text {
+  @apply text-on-surface-variant mb-4;
+}
+
+.delete-modal-buttons {
+  @apply flex gap-3;
+}
+
+.delete-confirm-btn {
+  @apply flex-1 px-4 py-2 rounded-lg bg-error text-on-error font-semibold hover:bg-error/90 transition-colors;
+}
+
+.delete-cancel-btn {
+  @apply flex-1 px-4 py-2 rounded-lg bg-surface-container-high text-on-surface font-semibold hover:bg-surface-container transition-colors;
+}
+
+/* État vide des listes partagées */
+.shared-empty-state {
+  @apply text-on-surface-variant text-center;
+}

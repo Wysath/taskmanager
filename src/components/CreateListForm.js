@@ -12,7 +12,7 @@ export default function CreateListForm({ onCreateList }) {
     e.preventDefault();
     setError("");
     if (!name.trim()) {
-      setError("Le nom de la liste est obligatoire.");
+      setError("Le nom de l'Escouade est obligatoire.");
       return;
     }
     setLoading(true);
@@ -20,7 +20,7 @@ export default function CreateListForm({ onCreateList }) {
       await onCreateList?.(name.trim());
       setName("");
     } catch (err) {
-      setError(err.message || "Erreur lors de la création de la liste.");
+      setError(err.message || "Erreur lors de la création de l'Escouade.");
     } finally {
       setLoading(false);
     }
@@ -29,32 +29,32 @@ export default function CreateListForm({ onCreateList }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col sm:flex-row gap-4 items-end bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 shadow-sm font-body"
-      aria-label="Créer une nouvelle liste partagée"
+      className="flex flex-col sm:flex-row gap-4 items-end"
+      aria-label="Créer une nouvelle Escouade"
       autoComplete="off"
     >
       <div className="flex-1 w-full">
-        <label htmlFor="list-name" className="block mb-1 text-on-surface font-headline font-medium">
-          Nom de la liste
+        <label htmlFor="list-name" className="block mb-2 text-[#c28e46] font-headline text-sm font-bold uppercase tracking-wider">
+          Nom de l'Escouade
         </label>
         <input
           id="list-name"
           type="text"
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Nom de la nouvelle liste..."
-          className="h-12 w-full rounded-lg border border-outline-variant bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
+          placeholder="Ex: Les Lames de Pierre, Les Éclairs Dorés..."
+          className="h-12 w-full bg-[#2c2a26] border-2 border-[#504538] text-[#e3d5b8] px-4 placeholder-[#8a8171] focus:border-[#c28e46] focus:outline-none transition-colors font-body"
           required
           aria-required="true"
           aria-invalid={!!error}
           disabled={loading}
         />
-        {error && <div className="text-error text-sm mt-1 font-medium" role="alert">{error}</div>}
+        {error && <div className="text-[#ffb4ab] text-xs mt-2 font-medium" role="alert">{error}</div>}
       </div>
       <button
         type="submit"
-        className="flex items-center gap-2 h-12 px-6 rounded-full bg-primary text-on-primary font-semibold shadow-md hover:bg-primary/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-        aria-label="Créer la liste"
+        className="flex items-center gap-2 h-12 px-6 bg-[#c28e46] text-[#151310] font-headline font-bold uppercase tracking-widest hover:bg-[#e8b879] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        aria-label="Créer l'Escouade"
         disabled={loading}
       >
         <Plus size={18} aria-hidden="true" />

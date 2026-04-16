@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 
 const SignupForm = () => {
-  const { signUp, error, loading } = useAuth();
+  const router = useRouter();
+  const { user, signUp, error, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Redirection si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (!loading && user) {
+      router.push("/");
+    }
+  }, [user, loading, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,6 +31,7 @@ const SignupForm = () => {
     setFormLoading(true);
     try {
       await signUp(email, password);
+      // La redirection se fera via l'useEffect quand user sera mis à jour
     } catch (err) {
       setFormError(error || "Erreur lors de l'inscription.");
     } finally {
@@ -32,7 +42,7 @@ const SignupForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-md mx-auto p-8 bg-surface-container-lowest rounded-xl shadow-md flex flex-col gap-6"
+      className="form-card"
       aria-label="Formulaire d'inscription"
       autoComplete="off"
     >
@@ -54,7 +64,7 @@ const SignupForm = () => {
           required
           aria-required="true"
           aria-invalid={!!(formError || error)}
-          className="w-full h-12 rounded-lg border border-outline-variant bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
+          className="input-lg"
         />
       </div>
       <div>
@@ -70,7 +80,7 @@ const SignupForm = () => {
           required
           aria-required="true"
           aria-invalid={!!(formError || error)}
-          className="w-full h-12 rounded-lg border border-outline-variant bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
+          className="input-lg"
         />
       </div>
       <div>
@@ -86,13 +96,13 @@ const SignupForm = () => {
           required
           aria-required="true"
           aria-invalid={!!(formError || error)}
-          className="w-full h-12 rounded-lg border border-outline-variant bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
+          className="input-lg"
         />
       </div>
       <button
         type="submit"
         disabled={formLoading || loading}
-        className="h-12 rounded-lg bg-primary text-on-primary font-semibold tracking-wide shadow-md transition-all hover:bg-primary-container hover:text-on-primary-container disabled:opacity-60 disabled:cursor-not-allowed"
+        className="btn-form"
       >
         {formLoading || loading ? "Inscription..." : "S'inscrire"}
       </button>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRavenMessenger } from "@/hooks/useRavenMessenger";
 import CreateListForm from "@/components/CreateListForm";
 import SharedListCard from "@/components/SharedListCard";
 import SharedListView from "@/components/SharedListView";
@@ -15,8 +16,9 @@ import {
   addMemberToList,
   removeMemberFromList
 } from "@/services/sharedListService";
-import { getDocs, collection, query, where, getDoc, doc } from "firebase/firestore";
+import { getDocs, collection, query, where, getDoc, doc, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { Plus, Users, Sword, Crown } from "lucide-react";
 
 export default function SharedListsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -28,17 +30,18 @@ export default function SharedListsPage() {
   const [tasksLoading, setTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState("");
   const [members, setMembers] = useState([]);
+  const [tasksQuery, setTasksQuery] = useState(null);
   
   // Abonnement temps réel aux listes partagées
   useEffect(() => {
-    if (!user) {
+    if (!user || !user.email) {
       setLists([]);
       setListsLoading(false);
       return;
     }
     setListsLoading(true);
     setError("");
-    const unsubscribe = subscribeToSharedLists(user.uid, (data, err) => {
+    const unsubscribe = subscribeToSharedLists(user.email, (data, err) => {
       if (err) {
         setError(err);
         setLists([]);
@@ -53,8 +56,15 @@ export default function SharedListsPage() {
   // Création d'une nouvelle liste
   const handleCreateList = useCallback(async (name) => {
     if (!user) throw new Error("Vous devez être connecté.");
-    await createSharedList(user.uid, name);
+    await createSharedList(user.uid, name, user.email);
   }, [user]);
+
+  // Notifications "Corbeau Messager" pour les nouvelles tâches
+  useRavenMessenger({
+    collectionQuery: tasksQuery,
+    currentUserEmail: user?.email,
+    enabled: !!selectedList && !!user,
+  });
 
   // Gestion ouverture/fermeture d'une liste
   // Abonnement temps réel aux tâches partagées
@@ -64,6 +74,7 @@ export default function SharedListsPage() {
       setTasksError("");
       setTasksLoading(false);
       setMembers([]);
+      setTasksQuery(null);
       return;
     }
     setTasksLoading(true);
@@ -78,38 +89,22 @@ export default function SharedListsPage() {
       }
       setTasksLoading(false);
     });
+    // Crée la requête pour le hook useRavenMessenger
+    const q = query(
+      collection(db, `sharedLists/${selectedList.id}/tasks`),
+      orderBy("createdAt", "desc")
+    );
+    setTasksQuery(q);
+    
     // Récupération des infos membres
     async function fetchMembers() {
       if (!selectedList.members || selectedList.members.length === 0) {
         setMembers([]);
         return;
       }
-      // Firestore n'autorise pas plus de 10 dans 'in', donc batch
-      let users = [];
-      for (let i = 0; i < selectedList.members.length; i += 10) {
-        const batch = selectedList.members.slice(i, i + 10);
-        const q = query(collection(db, "users"), where("uid", "in", batch));
-        const snap = await getDocs(q);
-        users = users.concat(snap.docs.map(doc => ({ id: doc.id, uid: doc.data().uid || doc.id, email: doc.data().email })));
-      }
-      // Ajoute les membres non trouvés : essaie de chercher par ID de document
-      const missing = selectedList.members.filter(uid => !users.find(u => u.uid === uid));
-      for (const uid of missing) {
-        try {
-          const docRef = doc(db, "users", uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            users.push({ id: docSnap.id, uid: docSnap.data().uid || uid, email: docSnap.data().email || uid });
-          } else {
-            // Document innexistant
-            users.push({ id: uid, uid, email: uid });
-          }
-        } catch (err) {
-          console.error(`[fetchMembers] Erreur pour uid ${uid}:`, err);
-          users.push({ id: uid, uid, email: uid });
-        }
-      }
-      setMembers(users);
+      // Les membres sont déjà structurés comme {email, role} dans selectedList
+      // On peut les utiliser directement
+      setMembers(selectedList.members);
     }
     fetchMembers();
     return () => unsubscribe();
@@ -125,50 +120,102 @@ export default function SharedListsPage() {
 
   if (authLoading || listsLoading) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-surface text-on-surface">
-        <div className="text-lg font-semibold">Chargement...</div>
+      <main className="min-h-screen flex flex-col items-center justify-center bg-[#151310] text-[#e3d5b8]">
+        <div className="text-lg font-headline uppercase tracking-widest text-[#c28e46]">Chargement des Escouades...</div>
       </main>
     );
   }
 
   if (!user) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-surface text-on-surface">
-        <div className="text-lg font-semibold">Veuillez vous connecter pour accéder aux listes partagées.</div>
+      <main className="min-h-screen flex flex-col items-center justify-center bg-[#151310] text-[#e3d5b8]">
+        <div className="text-lg font-headline uppercase tracking-widest text-[#c28e46]">Veuillez vous connecter pour accéder aux Escouades.</div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-surface text-on-surface flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-2xl flex flex-col gap-6">
-        <h1 className="text-2xl font-bold mb-2">Listes partagées</h1>
+    <main className="min-h-screen bg-[#151310] text-[#e3d5b8] flex flex-col items-center py-12 px-4">
+      <div className="w-full max-w-5xl flex flex-col gap-8">
+        {/* Page Header */}
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Sword size={32} className="text-[#c28e46]" />
+            <h1 className="text-5xl font-headline text-[#c28e46] uppercase tracking-widest">Les Escouades</h1>
+            <Users size={32} className="text-[#c28e46]" />
+          </div>
+          <p className="text-[#8a8171] font-label text-sm uppercase tracking-wider">Regroupez-vous pour accomplir de plus grandes quêtes</p>
+          <div className="h-1 w-24 bg-[#c28e46] mx-auto mt-4"></div>
+        </div>
+
+        {/* Error Display */}
         {error && (
-          <div className="p-4 bg-error-container text-error rounded-lg font-medium">{error}</div>
+          <div className="p-6 bg-[#93000a]/20 border-2 border-[#93000a] text-[#ffb4ab] rounded font-medium">
+            {error}
+          </div>
         )}
+
         {!selectedList && (
           <>
-            <CreateListForm onCreateList={handleCreateList} />
-            <div className="flex flex-col gap-4 mt-6">
+            {/* Create Squad Form */}
+            <div className="bg-[#211f1c] border-4 border-[#504538] p-8">
+              <h2 className="font-headline text-2xl text-[#c28e46] mb-6 uppercase tracking-widest">Former une nouvelle Escouade</h2>
+              <CreateListForm onCreateList={handleCreateList} />
+            </div>
+
+            {/* Squad List */}
+            <div className="flex flex-col gap-6 mt-6">
               {lists.length === 0 ? (
-                <div className="text-on-surface-variant text-center">Aucune liste partagée pour le moment.</div>
+                <div className="text-center py-16">
+                  <div className="flex justify-center mb-4">
+                    <Sword size={48} className="text-[#c28e46]" />
+                  </div>
+                  <div className="text-[#8a8171] font-label text-sm uppercase tracking-wider mb-4">
+                    Aucune Escouade pour le moment.
+                  </div>
+                  <p className="text-[#5c564c] font-body text-sm">Créez votre première Escouade pour recruter des Chasseurs et accomplir des quêtes ensemble!</p>
+                </div>
               ) : (
-                lists.map((list) => (
-                  <SharedListCard
-                    key={list.id}
-                    list={list}
-                    onOpen={() => handleOpenList(list)}
-                  />
-                ))
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {lists.map((list) => (
+                    <div
+                      key={list.id}
+                      className="bg-[#211f1c] border-4 border-[#504538] p-6 hover:border-[#c28e46] transition-colors cursor-pointer"
+                      onClick={() => handleOpenList(list)}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-headline text-2xl text-[#e8e1dc] uppercase tracking-widest mb-2">
+                            {list.name}
+                          </h3>
+                          <p className="text-[#8a8171] font-label text-xs uppercase tracking-wider flex items-center gap-1">
+                            <Users size={14} /> {list.members?.length || 0} Chasseur{(list.members?.length || 0) > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                        <div className="text-[#c28e46]">
+                          {list.ownerId === user.uid ? <Crown size={24} /> : <Sword size={24} />}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleOpenList(list)}
+                        className="w-full bg-[#2c2a26] text-[#e8e1dc] border-2 border-[#c28e46] py-2 font-headline text-xs uppercase tracking-widest hover:bg-[#c28e46] hover:text-[#151310] transition-colors"
+                      >
+                        Accéder à l'Escouade
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </>
         )}
+
         {selectedList && (
           <SharedListView
             list={selectedList}
             tasks={sharedTasks}
             currentUserId={user.uid}
+            currentUserEmail={user.email}
             members={members}
             onBack={handleCloseList}
             onAddTask={async ({ title, priority }) => {
@@ -186,10 +233,10 @@ export default function SharedListsPage() {
                         tasks={sharedTasks.map(task => ({
                           ...task,
                           // Affiche l'email de l'auteur si possible
-                          addedBy: members.find(m => m.uid === task.addedBy)?.email || task.addedBy
+                          addedBy: members.find(m => m.email?.toLowerCase() === task.addedBy?.toLowerCase())?.email || task.addedBy
                         }))}
-            onRemoveMember={async (member) => {
-              await removeMemberFromList(selectedList.id, member.uid, user.uid);
+            onRemoveMember={async (memberEmail) => {
+              await removeMemberFromList(selectedList.id, memberEmail, user.uid);
             }}
             tasksLoading={tasksLoading}
             tasksError={tasksError}

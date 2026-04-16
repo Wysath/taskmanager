@@ -10,9 +10,10 @@ import {
   deleteTask,
 } from "@/services/rtdbTaskService";
 import { useMemo } from "react";
-import { Filter, ListChecks, User, Archive } from "lucide-react";
+import { Filter, ListChecks, User, Archive, CheckCircle2, X, Trash2, Plus, Search, ArrowUp, ArrowDown } from "lucide-react";
 import AddTaskForm from "../../components/AddTaskForm";
 import TaskList from "../../components/TaskList";
+import SearchBar from "../../components/SearchBar";
 
 export default function TachesPage() {
   const { user, loading, logOut } = useAuth();
@@ -23,9 +24,11 @@ export default function TachesPage() {
   const [priorityFilter, setPriorityFilter] = useState("toutes");
   const [statusFilter, setStatusFilter] = useState("toutes");
   const [sortMode, setSortMode] = useState("recent");
+  const [searchQuery, setSearchQuery] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [draftTaskTitle, setDraftTaskTitle] = useState("");
   const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const priorityOrder = { haute: 3, moyenne: 2, basse: 1, medium: 2 };
 
   useEffect(() => {
@@ -143,6 +146,13 @@ export default function TachesPage() {
     setPendingDeleteTaskId(null);
   };
 
+  const handleReorderTasks = useCallback(
+    (reorderedTasks) => {
+      setTasks(reorderedTasks);
+    },
+    []
+  );
+
   const totalTasks = tasks.length;
 
   // Construit la liste visible avec filtre et tri
@@ -154,7 +164,9 @@ export default function TachesPage() {
         statusFilter === "toutes" ||
         (statusFilter === "actives" && !taskItem.completed) ||
         (statusFilter === "completees" && taskItem.completed);
-      return matchesPriority && matchesStatus;
+      const matchesSearch = searchQuery === "" || 
+        taskItem.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesPriority && matchesStatus && matchesSearch;
     });
 
     return [...filteredTasks].sort((taskA, taskB) => {
@@ -172,110 +184,160 @@ export default function TachesPage() {
       }
       return (taskB.createdAt?.seconds || 0) - (taskA.createdAt?.seconds || 0);
     });
-  }, [tasks, priorityFilter, statusFilter, sortMode]);
+  }, [tasks, priorityFilter, statusFilter, sortMode, searchQuery]);
 
   if (loading || tasksLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-lg text-on-surface-variant bg-surface">
+      <div className="flex min-h-screen items-center justify-center text-lg text-on-surface-variant bg-background">
         Chargement...
       </div>
     );
   }
 
   if (!user) {
-    // On laisse la redirection faire son effet, on n'affiche rien
     return null;
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-8 sm:px-6 lg:px-8">
-      <section className="mx-auto w-full max-w-3xl">
-        <header className="mb-6">
-          <h1 className="text-3xl font-bold text-zinc-900">Tâches</h1>
-          <p className="mt-1 text-zinc-600">
-            Retrouvez vos tâches du jour ({totalTasks} au total).
-          </p>
-        </header>
+    <>
+      {/* Main Content: Grand Livre des Quêtes */}
+      <div className="flex flex-col items-center justify-center p-4 md:p-12 overflow-y-auto parchment-texture  custom-scroll">
+        <div className="relative w-full max-w-4xl min-h-217.5 p-8 md:p-16 flex flex-col">
+          {/* Header Structural Rivets */}
+          <div className="absolute top-4 left-4 w-2 h-2 bg-outline-variant opacity-40"></div>
+          <div className="absolute top-4 right-4 w-2 h-2 bg-outline-variant opacity-40"></div>
+          <div className="absolute bottom-4 left-4 w-2 h-2 bg-outline-variant opacity-40"></div>
+            <div className="absolute bottom-4 right-4 w-2 h-2 bg-outline-variant opacity-40"></div>
+            {/* Title Section */}
+            <div className="text-center mb-10">
+              <h1 className="font-headline text-4xl md:text-5xl text-[#2b2824] mb-2">Registre des Contrats Personnels</h1>
+              <div className="h-1 w-full bg-[#2b2824] mb-1"></div>
+              <div className="h-0.5 w-full bg-[#c28e46]"></div>
+            </div>
 
-        {error && (
-          <div className="mb-4 p-4 bg-error-container text-error rounded-lg font-medium">
-            {error}
+            {/* Search Bar */}
+            <div className="mb-8">
+              <div className="flex items-center gap-2 bg-[#2b2824] border-2 border-[#c2b59b] px-4 py-2">
+                <Search size={20} className="text-[#c28e46]" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher une tâche..."
+                  className="flex-1 bg-transparent text-[#e3d5b8] placeholder-[#8a8171] focus:outline-none font-body"
+                />
+              </div>
+            </div>
+
+            {/* Filters: Leather Bookmarks */}
+            <div className="flex flex-col md:flex-row gap-4 mb-12">
+              <div className="flex gap-2">
+                <button className={`px-6 py-2 font-label text-xs font-bold uppercase tracking-widest shadow-lg transition-opacity ${statusFilter === "toutes" ? "bg-[#24211d] text-[#e3d5b8]" : "bg-[#3d362d] text-[#e3d5b8] opacity-80 hover:opacity-100"}`} onClick={() => setStatusFilter("toutes")}>
+                  Toutes
+                </button>
+                <button className={`px-6 py-2 font-label text-xs font-bold uppercase tracking-widest shadow-lg transition-opacity ${statusFilter === "actives" ? "bg-[#24211d] text-[#e3d5b8]" : "bg-[#3d362d] text-[#e3d5b8] opacity-80 hover:opacity-100"}`} onClick={() => setStatusFilter("actives")}>
+                  En Cours (Actives)
+                </button>
+                <button className={`px-6 py-2 font-label text-xs font-bold uppercase tracking-widest shadow-lg transition-opacity ${statusFilter === "completees" ? "bg-[#24211d] text-[#e3d5b8]" : "bg-[#3d362d] text-[#e3d5b8] opacity-80 hover:opacity-100"}`} onClick={() => setStatusFilter("completees")}>
+                  Accomplies (Terminées)
+                </button>
+              </div>
+
+              {/* Sort Buttons */}
+              <div className="flex gap-2 ml-auto">
+                <button 
+                  className={`flex items-center gap-1 px-4 py-2 font-label text-xs font-bold uppercase tracking-widest shadow-lg transition-opacity ${sortMode === "priority_asc" ? "bg-[#24211d] text-[#e3d5b8]" : "bg-[#3d362d] text-[#e3d5b8] opacity-80 hover:opacity-100"}`}
+                  onClick={() => setSortMode("priority_asc")}
+                  title="Trier par priorité croissante (basse → haute)"
+                >
+                  <ArrowUp size={14} />
+                  Priorité
+                </button>
+                <button 
+                  className={`flex items-center gap-1 px-4 py-2 font-label text-xs font-bold uppercase tracking-widest shadow-lg transition-opacity ${sortMode === "priority_desc" ? "bg-[#24211d] text-[#e3d5b8]" : "bg-[#3d362d] text-[#e3d5b8] opacity-80 hover:opacity-100"}`}
+                  onClick={() => setSortMode("priority_desc")}
+                  title="Trier par priorité décroissante (haute → basse)"
+                >
+                  <ArrowDown size={14} />
+                  Priorité
+                </button>
+              </div>
+            </div>
+            {/* Quest Lines */}
+            <div className="flex-1 space-y-2">
+              <TaskList
+                tasks={visibleTaskItems}
+                onToggle={handleToggleTask}
+                onDelete={handleDeleteTask}
+                onReorder={handleReorderTasks}
+                editingTaskId={editingTaskId}
+                draftTaskTitle={draftTaskTitle}
+                onDraftChange={setDraftTaskTitle}
+                onEditCancel={handleCancelEditTask}
+                onEditConfirm={handleConfirmEditTask}
+                pendingDeleteTaskId={pendingDeleteTaskId}
+                onDeleteCancel={handleCancelDeleteTask}
+                onDeleteConfirm={handleConfirmDeleteTask}
+              />
+            </div>
+            {/* Footer Sign-off */}
+            <div className="mt-12 flex justify-between items-end">
+              <div className="font-headline text-[#5c564c] opacity-60 italic">
+                "Par le sceau de la Guilde, que votre lame ne s'émousse jamais."
+              </div>
+              <div className="text-right">
+                <p className="font-label text-[10px] text-[#2b2824] uppercase font-bold tracking-[0.2em]">Authentifié par</p>
+                <p className="font-headline text-2xl text-[#2b2824]">L'Intendance</p>
+              </div>
+            </div>
+        </div>
+        </div>
+
+      {/* FAB - Floating Action Button */}
+      <button
+        onClick={() => setShowAddForm(!showAddForm)}
+        className="fixed bottom-24 md:bottom-8 right-8 bg-[#c28e46] text-[#151310] p-4 rounded-full shadow-2xl hover:bg-[#e8b879] transition-colors z-40 flex items-center justify-center"
+        title="Ajouter une nouvelle tâche"
+        aria-label="Ajouter une tâche"
+      >
+        <Plus size={28} />
+      </button>
+
+      {/* Mobile Navigation (Footer) */}
+      <footer className="md:hidden fixed bottom-0 w-full bg-[#151310] flex justify-around py-3 border-t border-[#3a352e] z-50">
+        <button className="flex flex-col items-center text-[#c28e46]">
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: '"FILL" 1' }}>assignment</span>
+          <span className="text-[10px] font-label uppercase">Quêtes</span>
+        </button>
+        <button className="flex flex-col items-center text-[#8a8171]">
+          <span className="material-symbols-outlined">map</span>
+          <span className="text-[10px] font-label uppercase">Cartes</span>
+        </button>
+        <button className="flex flex-col items-center text-[#8a8171]">
+          <span className="material-symbols-outlined">menu_book</span>
+          <span className="text-[10px] font-label uppercase">Notes</span>
+        </button>
+      </footer>
+
+      {/* Modal AddTaskForm */}
+      {showAddForm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60">
+          <div className="bg-[#e3d5b8] parchment-texture p-8 shadow-2xl max-w-lg w-full relative border border-[#c2b59b]">
+            <button
+              className="absolute top-4 right-4 text-[#2b2824] hover:text-[#93000a] transition-colors"
+              onClick={() => setShowAddForm(false)}
+              aria-label="Fermer"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="font-headline text-2xl text-[#2b2824] mb-6">Nouvelle Mission</h2>
+            <AddTaskForm onAddTask={async (taskData) => {
+              await handleAddTask(taskData);
+              setShowAddForm(false);
+            }} />
           </div>
-        )}
-
-        {/* Liste des tâches affichée via TaskList */}
-        <section aria-label="Liste des tâches" role="list">
-          <AddTaskForm onAddTask={handleAddTask} />
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
-              <Filter size={18} aria-hidden="true" />
-              <label htmlFor="priority-filter-taches" className="sr-only">
-                Filtrer par priorité
-              </label>
-              <select
-                id="priority-filter-taches"
-                value={priorityFilter}
-                onChange={(event) => setPriorityFilter(event.target.value)}
-                className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
-              >
-                <option value="toutes">Toutes priorités</option>
-                <option value="haute">Haute</option>
-                <option value="moyenne">Moyenne</option>
-                <option value="basse">Basse</option>
-              </select>
-            </div>
-
-            <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
-              <label htmlFor="status-filter-taches" className="sr-only">
-                Filtrer par statut
-              </label>
-              <select
-                id="status-filter-taches"
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
-              >
-                <option value="toutes">Tous statuts</option>
-                <option value="actives">Actives</option>
-                <option value="completees">Complétées</option>
-              </select>
-            </div>
-
-            <div className="rounded-lg bg-surface-container-high px-2 py-1 text-on-surface-variant">
-              <label htmlFor="sort-mode-taches" className="sr-only">
-                Mode de tri
-              </label>
-              <select
-                id="sort-mode-taches"
-                value={sortMode}
-                onChange={(event) => setSortMode(event.target.value)}
-                className="cursor-pointer rounded-md bg-transparent px-2 py-1 text-sm focus:outline-none"
-              >
-                <option value="recent">Plus récent</option>
-                <option value="priority_desc">Priorité haute → basse</option>
-                <option value="priority_asc">Priorité basse → haute</option>
-                <option value="title_asc">Titre A → Z</option>
-                <option value="title_desc">Titre Z → A</option>
-              </select>
-            </div>
-          </div>
-
-          <TaskList
-            tasks={visibleTaskItems}
-            onToggle={handleToggleTask}
-            onEdit={handleEditTask}
-            onDelete={handleRequestDeleteTask}
-            editingTaskId={editingTaskId}
-            draftTaskTitle={draftTaskTitle}
-            onDraftChange={setDraftTaskTitle}
-            onEditCancel={handleCancelEditTask}
-            onEditConfirm={handleConfirmEditTask}
-            pendingDeleteTaskId={pendingDeleteTaskId}
-            onDeleteCancel={handleCancelDeleteTask}
-            onDeleteConfirm={handleConfirmDeleteTask}
-          />
-        </section>
-      </section>
-    </main>
+        </div>
+      )}
+    </>
   );
 }

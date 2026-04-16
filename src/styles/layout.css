@@ -1,0 +1,164 @@
+/* ============================================
+   LAYOUT - Styles pour la structure générale
+   ============================================ */
+
+/* Header / Navigation */
+.header {
+  @apply fixed top-0 left-0 right-0 z-50 border-b border-outline-variant/20 bg-surface/95 shadow-sm backdrop-blur;
+}
+
+.header-nav {
+  @apply mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8;
+}
+
+.header-brand {
+  @apply text-lg font-bold tracking-tight text-on-surface font-headline;
+}
+
+.header-menu {
+  @apply flex items-center gap-6 text-sm font-medium text-on-surface-variant font-body;
+}
+
+.header-link {
+  @apply flex items-center gap-2 transition-colors hover:text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 rounded;
+}
+
+/* Navigation links */
+.header-nav-link {
+  @apply flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
+}
+
+.header-nav-link-primary {
+  @apply flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-medium transition-colors hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
+}
+
+.header-nav-link-logout {
+  @apply flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-error transition-colors hover:bg-error/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-error-container focus-visible:ring-offset-2;
+}
+
+.header-mobile-link {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface font-medium transition-colors hover:bg-surface-container focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container;
+}
+
+/* Main layout */
+.main-wrapper {
+  @apply min-h-screen bg-surface text-on-surface flex flex-col items-center py-10 px-4;
+}
+
+.main-content {
+  @apply w-full max-w-2xl flex flex-col gap-6;
+}
+
+.container-centered {
+  @apply max-w-2xl mx-auto w-full;
+}
+
+/* Page transitions */
+.page {
+  @apply min-h-screen flex flex-col;
+}
+
+.page-loading,
+.page-empty,
+.page-center {
+  @apply min-h-screen flex flex-col items-center justify-center bg-surface text-on-surface;
+}
+
+.page-loading-text,
+.page-empty-text {
+  @apply text-lg font-semibold;
+}
+
+/* Sections et dividers */
+.section {
+  @apply mb-6;
+}
+
+.divider {
+  @apply border-t border-outline-variant/10;
+}
+
+/* Spacing helpers */
+.space-top {
+  @apply mt-16 pt-16;
+}
+
+/* Grid layouts */
+.grid-auto {
+  @apply grid auto-cols-fr gap-4;
+}
+
+.grid-2 {
+  @apply grid grid-cols-2 gap-4;
+}
+
+.grid-3 {
+  @apply grid grid-cols-3 gap-4;
+}
+
+@media (max-width: 640px) {
+  .grid-2,
+  .grid-3 {
+    @apply grid-cols-1;
+  }
+}
+
+/* Flexbox helpers */
+.flex-between {
+  @apply flex items-center justify-between;
+}
+
+.flex-center {
+  @apply flex items-center justify-center;
+}
+
+.flex-col-center {
+  @apply flex flex-col items-center justify-center;
+}
+
+/* Modales et overlays */
+.modal-overlay {
+  @apply fixed inset-0 flex items-center justify-center bg-black/50 z-50;
+}
+
+.modal-content {
+  @apply bg-surface rounded-2xl p-6 max-w-sm mx-4 border border-outline-variant/20 shadow-xl;
+}
+
+.modal-header {
+  @apply text-lg font-bold text-on-surface mb-2;
+}
+
+.modal-body {
+  @apply text-on-surface-variant mb-4;
+}
+
+.modal-footer {
+  @apply flex gap-3;
+}
+
+/* Avec marge top pour le header fixed */
+.pt-header {
+  @apply pt-20;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .sm-hidden {
+    @apply hidden;
+  }
+
+  .sm-flex {
+    @apply flex;
+  }
+
+  .sm-full {
+    @apply w-full;
+  }
+}
+
+@media (min-width: 641px) {
+  .sm-only {
+    @apply block;
+  }
+}

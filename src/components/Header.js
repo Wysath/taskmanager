@@ -1,79 +1,149 @@
 "use client";
 
-
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Home, ListChecks, User, LogIn, LogOut } from "lucide-react";
+import { Home, ListChecks, Share2, User, LogIn, LogOut, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 const Header = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/login");
   };
 
-  return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-outline-variant/20 bg-surface/95 shadow-sm backdrop-blur">
-      <nav
-        className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8"
-        aria-label="Navigation principale"
+  const navItems = [
+    { href: "/", label: "Accueil", icon: Home },
+    { href: "/taches", label: "Tâches", icon: ListChecks },
+    { href: "/shared", label: "Partagé", icon: Share2 },
+  ];
+
+  const authItems = !loading && user ? (
+    <>
+      <Link href="/profil" className="header-nav-link">
+        <User size={18} aria-hidden="true" />
+        <span className="hidden sm:inline">Profil</span>
+      </Link>
+      <button
+        onClick={handleLogout}
+        className="header-nav-link-logout"
+        type="button"
+        aria-label="Déconnexion"
       >
-        {/* Nom de l'application */}
-        <span className="text-xl font-bold tracking-tight text-on-surface font-headline">
-          Gestionnaire de Tâches
-        </span>
-        {/* Menu de navigation dynamique selon l'état de connexion */}
-        <div className="flex items-center gap-6 text-sm font-medium text-on-surface-variant font-body">
-          <Link
-            href="/"
-            className="flex items-center gap-2 transition-colors hover:text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 rounded"
-          >
-            <Home size={18} aria-hidden="true" />
-            Accueil
-          </Link>
-          <Link
-            href="/taches"
-            className="flex items-center gap-2 transition-colors hover:text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 rounded"
-          >
-            <ListChecks size={18} aria-hidden="true" />
-            Tâches
-          </Link>
-          {/* Affichage conditionnel selon l'état de connexion */}
-          {!loading && !user && (
+        <LogOut size={18} aria-hidden="true" />
+        <span className="hidden sm:inline">Déconnexion</span>
+      </button>
+    </>
+  ) : !loading && !user ? (
+    <Link href="/login" className="header-nav-link-primary">
+      <LogIn size={18} aria-hidden="true" />
+      <span className="hidden sm:inline">Connexion</span>
+    </Link>
+  ) : null;
+
+  return (
+    <header className="header bg">
+      <div className="header-nav bg-primary">
+        {/* Logo/Brand */}
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-primary-container flex items-center justify-center shadow-lg shadow-primary/20">
+            <span className="text-white font-bold text-sm">TM</span>
+          </div>
+          <span className="header-brand hidden sm:block">Gestionnaire de Tâches</span>
+        </Link>
+
+        {/* Navigation Desktop */}
+        <nav className="hidden md:flex items-center gap-6">
+          {navItems.map(({ href, label, icon: Icon }) => (
             <Link
-              href="/login"
-              className="ml-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary transition-colors hover:bg-primary-container hover:text-on-primary-container focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
+              key={href}
+              href={href}
+              className="header-nav-link"
             >
-              <LogIn size={18} aria-hidden="true" />
-              Connexion
+              <Icon size={18} aria-hidden="true" />
+              <span>{label}</span>
             </Link>
-          )}
-          {!loading && user && (
-            <>
-              <Link
-                href="/profil"
-                className="ml-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary transition-colors hover:bg-primary-container hover:text-on-primary-container focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
-              >
-                <User size={18} aria-hidden="true" />
-                Profil
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="ml-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-                type="button"
-              >
-                <LogOut size={18} aria-hidden="true" />
-                Déconnexion
-              </button>
-            </>
-          )}
+          ))}
+        </nav>
+
+        {/* Auth Actions Desktop */}
+        <div className="hidden md:flex items-center gap-2">
+          {authItems}
         </div>
-      </nav>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 rounded-lg hover:bg-surface-container transition-colors"
+          aria-label="Menu"
+          type="button"
+        >
+          {mobileMenuOpen ? (
+            <X size={24} aria-hidden="true" />
+          ) : (
+            <Menu size={24} aria-hidden="true" />
+          )}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-surface-container-low border-t border-outline-variant/20">
+          <nav className="flex flex-col p-4 gap-2">
+            {navItems.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="header-mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Icon size={18} aria-hidden="true" />
+                <span>{label}</span>
+              </Link>
+            ))}
+            <div className="border-t border-outline-variant/20 my-2" />
+            {!loading && user && (
+              <>
+                <Link
+                  href="/profil"
+                  className="header-mobile-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User size={18} aria-hidden="true" />
+                  <span>Profil</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="header-mobile-link text-error hover:bg-error/10 justify-start"
+                  type="button"
+                >
+                  <LogOut size={18} aria-hidden="true" />
+                  <span>Déconnexion</span>
+                </button>
+              </>
+            )}
+            {!loading && !user && (
+              <Link
+                href="/login"
+                className="header-mobile-link bg-primary text-on-primary hover:bg-primary/90"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <LogIn size={18} aria-hidden="true" />
+                <span>Connexion</span>
+              </Link>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };

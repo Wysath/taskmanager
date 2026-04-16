@@ -9,86 +9,39 @@
 
 @import "tailwindcss";
 
-:root {
-  /* Core surfaces */
-  --background: #faf8ff;
-  --foreground: #191b23;
-  --surface: #faf8ff;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #f3f3fd;
-  --surface-container: #ededf8;
-  --surface-container-high: #e7e7f2;
-  --surface-container-highest: #e1e2ec;
-  --surface-variant: #e1e2ec;
-  --surface-tint: #0c56d0;
+/* Monster Hunter Wilds - Grand Livre des Quêtes Styles */
 
-  /* Text / on-colors */
-  --on-surface: #191b23;
-  --on-surface-variant: #434654;
-  --on-background: #191b23;
-  --on-primary: #ffffff;
-  --on-primary-container: #c4d2ff;
-  --on-secondary-container: #51617e;
-  --on-tertiary: #ffffff;
-  --on-tertiary-container: #ffc6b2;
-
-  /* Brand / semantic */
-  --primary: #003d9b;
-  --primary-container: #0052cc;
-  --primary-fixed: #dae2ff;
-  --secondary: #4f5f7b;
-  --secondary-container: #cdddff;
-  --tertiary: #7b2600;
-  --tertiary-container: #a33500;
-  --error: #ba1a1a;
-  --error-container: #ffdad6;
-
-  /* Structure */
-  --outline: #737685;
-  --outline-variant: #c3c6d6;
-
-  /* Shadows */
-  --shadow-ambient: 0px 20px 40px rgba(25, 27, 35, 0.06);
+.parchment-texture {
+  background-image: 
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 10px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 10px),
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.15), rgba(0,0,0,0.05));
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-container-lowest: var(--surface-container-lowest);
-  --color-surface-container-low: var(--surface-container-low);
-  --color-surface-container: var(--surface-container);
-  --color-surface-container-high: var(--surface-container-high);
-  --color-surface-container-highest: var(--surface-container-highest);
-  --color-surface-variant: var(--surface-variant);
-  --color-surface-tint: var(--surface-tint);
-  --color-on-surface: var(--on-surface);
-  --color-on-surface-variant: var(--on-surface-variant);
-  --color-on-background: var(--on-background);
-  --color-primary: var(--primary);
-  --color-primary-container: var(--primary-container);
-  --color-primary-fixed: var(--primary-fixed);
-  --color-on-primary: var(--on-primary);
-  --color-on-primary-container: var(--on-primary-container);
-  --color-secondary: var(--secondary);
-  --color-secondary-container: var(--secondary-container);
-  --color-on-secondary-container: var(--on-secondary-container);
-  --color-tertiary: var(--tertiary);
-  --color-tertiary-container: var(--tertiary-container);
-  --color-on-tertiary: var(--on-tertiary);
-  --color-on-tertiary-container: var(--on-tertiary-container);
-  --color-error: var(--error);
-  --color-error-container: var(--error-container);
-  --color-outline: var(--outline);
-  --color-outline-variant: var(--outline-variant);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-headline: "Manrope", var(--font-geist-sans), sans-serif;
-  --font-body: "Inter", var(--font-geist-sans), sans-serif;
+.guild-stamp {
+  border: 4px solid #2b2824;
+  transform: rotate(-5deg);
 }
 
-body {
-  background: var(--background);
-  color: var(--on-surface);
-  font-family: "Inter", var(--font-geist-sans), sans-serif;
+.valid-stamp {
+  color: #93000a;
+  border: 4px solid #93000a;
+  font-family: "Newsreader", serif;
+  font-weight: 800;
+  padding: 2px 8px;
+  transform: rotate(-15deg);
+  background: rgba(147, 0, 10, 0.05);
+}
+
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: #3a352e;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #c28e46;
 }

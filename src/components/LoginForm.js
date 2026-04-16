@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { LogIn } from "lucide-react";
 
 const LoginForm = () => {
-  const { signIn, signInWithGoogle, error, loading } = useAuth();
+  const router = useRouter();
+  const { user, signIn, signInWithGoogle, error, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Redirection si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (!loading && user) {
+      router.push("/");
+    }
+  }, [user, loading, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +28,6 @@ const LoginForm = () => {
     try {
       await signIn(email, password);
     } catch (err) {
-      // L'erreur est déjà traduite dans le contexte
       setFormError(error || "Erreur lors de la connexion.");
     } finally {
       setFormLoading(false);
@@ -40,33 +49,33 @@ const LoginForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full max-w-md mx-auto p-8 bg-surface-container-lowest rounded-xl shadow-md flex flex-col gap-6"
+      className="space-y-4"
       aria-label="Formulaire de connexion"
       autoComplete="off"
     >
       {(formError || error) && (
-        <div className="text-red-600 text-sm font-medium" role="alert">
+        <div className="text-[#ffb4ab] text-sm font-medium bg-[#93000a]/20 p-3 border border-[#93000a]/50 rounded" role="alert">
           {formError || error}
         </div>
       )}
+      
       <div>
-        <label htmlFor="email" className="block mb-1 text-on-surface font-medium">
-          Adresse e-mail
+        <label htmlFor="email" className="block mb-2 text-[#c28e46] font-label text-xs uppercase font-semibold tracking-wider">
+          E-mail
         </label>
         <input
           id="email"
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          placeholder="Votre e-mail"
+          placeholder="hunter@example.com"
           required
-          aria-required="true"
-          aria-invalid={!!(formError || error)}
-          className="w-full h-12 rounded-lg border border-outline-variant bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
+          className="w-full bg-[#2c2a26] border-2 border-[#504538] text-[#e3d5b8] px-4 py-3 placeholder-[#8a8171] focus:border-[#c28e46] focus:outline-none transition-colors font-body"
         />
       </div>
+
       <div>
-        <label htmlFor="password" className="block mb-1 text-on-surface font-medium">
+        <label htmlFor="password" className="block mb-2 text-[#c28e46] font-label text-xs uppercase font-semibold tracking-wider">
           Mot de passe
         </label>
         <input
@@ -74,31 +83,33 @@ const LoginForm = () => {
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          placeholder="Votre mot de passe"
+          placeholder="••••••••"
           required
-          aria-required="true"
-          aria-invalid={!!(formError || error)}
-          className="w-full h-12 rounded-lg border border-outline-variant bg-surface-container-highest px-4 text-on-surface placeholder:text-outline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2"
+          className="w-full bg-[#2c2a26] border-2 border-[#504538] text-[#e3d5b8] px-4 py-3 placeholder-[#8a8171] focus:border-[#c28e46] focus:outline-none transition-colors font-body"
         />
       </div>
+
       <button
         type="submit"
         disabled={formLoading || loading}
-        className="h-12 rounded-lg bg-primary text-on-primary font-semibold tracking-wide shadow-md transition-all hover:bg-primary-container hover:text-on-primary-container disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full bg-[#c28e46] text-[#151310] py-3 font-headline font-bold uppercase tracking-widest hover:bg-[#e8b879] disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
       >
+        <LogIn size={18} />
         {formLoading || loading ? "Connexion..." : "Se connecter"}
       </button>
+
       <button
         type="button"
         onClick={handleGoogle}
         disabled={formLoading || loading}
-        className="h-12 rounded-lg bg-white text-on-surface font-semibold tracking-wide shadow border border-outline-variant transition-all hover:bg-surface-container-high disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full bg-[#2c2a26] text-[#e8e1dc] border-2 border-[#c28e46] py-3 font-headline font-bold uppercase tracking-widest hover:bg-[#3a3835] disabled:opacity-60 transition-colors"
       >
-        Se connecter avec Google
+        Google
       </button>
-      <div className="text-center text-sm mt-2">
-        Pas encore de compte ?{' '}
-        <Link href="/register" className="text-primary underline hover:text-primary-container">
+
+      <div className="text-center text-sm text-[#8a8171] pt-2">
+        Pas de compte ?{' '}
+        <Link href="/register" className="text-[#c28e46] font-semibold hover:text-[#e8b879] transition-colors">
           S'inscrire
         </Link>
       </div>

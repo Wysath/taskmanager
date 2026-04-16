@@ -17,16 +17,21 @@ import {
 import { db } from "@/lib/firebase";
 
 // 1. Crée une nouvelle liste partagée
-export async function createSharedList(userId, name) {
+export async function createSharedList(userId, name, userEmail) {
   try {
     const ref = collection(db, "sharedLists");
     const docRef = await addDoc(ref, {
       name,
       ownerId: userId,
-      members: [userId],
+      members: [{ email: userEmail, role: "admin" }],
       createdAt: serverTimestamp(),
     });
-    return { id: docRef.id, name, ownerId: userId, members: [userId] };
+    return { 
+      id: docRef.id, 
+      name, 
+      ownerId: userId, 
+      members: [{ email: userEmail, role: "admin" }] 
+    };
   } catch (err) {
     console.error("[createSharedList]", err);
     throw err;
@@ -34,11 +39,19 @@ export async function createSharedList(userId, name) {
 }
 
 // 2. Récupère les listes où l'utilisateur est membre
-export async function getUserSharedLists(userId) {
+export async function getUserSharedLists(userEmail) {
   try {
-    const q = query(collection(db, "sharedLists"), where("members", "array-contains", userId));
-    const snap = await getDocs(q);
-    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    // Récupère toutes les listes et filtre côté client
+    const ref = collection(db, "sharedLists");
+    const snap = await getDocs(ref);
+    const lists = snap.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .filter((list) => {
+        // Filtre les listes où l'utilisateur est membre
+        if (!Array.isArray(list.members)) return false;
+        return list.members.some((m) => m.email === userEmail || m.email?.toLowerCase() === userEmail?.toLowerCase());
+      });
+    return lists;
   } catch (err) {
     console.error("[getUserSharedLists]", err);
     throw err;
@@ -46,12 +59,19 @@ export async function getUserSharedLists(userId) {
 }
 
 // 3. Écoute en temps réel les listes partagées
-export function subscribeToSharedLists(userId, callback) {
-  const q = query(collection(db, "sharedLists"), where("members", "array-contains", userId));
+export function subscribeToSharedLists(userEmail, callback) {
+  const ref = collection(db, "sharedLists");
   return onSnapshot(
-    q,
+    ref,
     (snap) => {
-      callback(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })), null);
+      const lists = snap.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((list) => {
+          // Filtre les listes où l'utilisateur est membre
+          if (!Array.isArray(list.members)) return false;
+          return list.members.some((m) => m.email === userEmail || m.email?.toLowerCase() === userEmail?.toLowerCase());
+        });
+      callback(lists, null);
     },
     (err) => {
       console.error("[subscribeToSharedLists]", err);
@@ -60,7 +80,7 @@ export function subscribeToSharedLists(userId, callback) {
   );
 }
 
-// 4. Ajoute un membre par email
+// 4. Ajoute un membre par email avec le rôle 'editor'
 export async function addMemberToList(listId, email) {
   try {
     const normalizedEmail = email.trim().toLowerCase();
@@ -73,11 +93,11 @@ export async function addMemberToList(listId, email) {
     const usersSnap = await getDocs(usersQ);
     
     if (!usersSnap.empty) {
-      const userDoc = usersSnap.docs[0];
-      const userUid = userDoc.data().uid || userDoc.id;
       const listRef = doc(db, "sharedLists", listId);
-      await updateDoc(listRef, { members: arrayUnion(userUid) });
-      return userUid;
+      await updateDoc(listRef, { 
+        members: arrayUnion({ email: normalizedEmail, role: "editor" }) 
+      });
+      return normalizedEmail;
     }
     
     // Fallback : cherche tous les users et filtre par email localement (cas où l'email est stocké en casse différente)
@@ -89,10 +109,11 @@ export async function addMemberToList(listId, email) {
     });
     
     if (matchingUser) {
-      const userUid = matchingUser.data().uid || matchingUser.id;
       const listRef = doc(db, "sharedLists", listId);
-      await updateDoc(listRef, { members: arrayUnion(userUid) });
-      return userUid;
+      await updateDoc(listRef, { 
+        members: arrayUnion({ email: normalizedEmail, role: "editor" }) 
+      });
+      return normalizedEmail;
     }
     
     throw new Error(`Aucun utilisateur trouvé avec l'email ${email}. Assurez-vous que cet utilisateur s'est inscrit.`);
@@ -102,17 +123,91 @@ export async function addMemberToList(listId, email) {
   }
 }
 
-// 5. Retire un membre (seul le owner peut)
-export async function removeMemberFromList(listId, memberUidToRemove, currentUserId) {
+// 5. Retire un membre (seul l'admin peut)
+export async function removeMemberFromList(listId, memberEmail, currentUserId) {
   try {
     const listRef = doc(db, "sharedLists", listId);
     const listSnap = await getDoc(listRef);
     if (!listSnap.exists()) throw new Error("Liste introuvable");
     const list = listSnap.data();
-    if (list.ownerId !== currentUserId) throw new Error("Seul le propriétaire peut retirer un membre");
-    await updateDoc(listRef, { members: arrayRemove(memberUidToRemove) });
+    if (list.ownerId !== currentUserId) throw new Error("Seul l'administrateur peut retirer un membre");
+    
+    // Trouve et retire le membre avec cet email
+    const memberToRemove = list.members.find(m => m.email?.toLowerCase() === memberEmail?.toLowerCase());
+    if (memberToRemove) {
+      await updateDoc(listRef, { members: arrayRemove(memberToRemove) });
+    }
   } catch (err) {
     console.error("[removeMemberFromList]", err);
+    throw err;
+  }
+}
+
+// 5b. Met à jour le rôle d'un membre (seul l'admin peut)
+export async function updateMemberRole(listId, memberEmail, newRole, currentUserId) {
+  try {
+    if (!["admin", "editor", "viewer"].includes(newRole)) {
+      throw new Error("Rôle invalide. Rôles acceptés: admin, editor, viewer");
+    }
+
+    const listRef = doc(db, "sharedLists", listId);
+    const listSnap = await getDoc(listRef);
+    if (!listSnap.exists()) throw new Error("Liste introuvable");
+    
+    const list = listSnap.data();
+    if (list.ownerId !== currentUserId) {
+      throw new Error("Seul l'administrateur peut modifier les rôles des membres");
+    }
+    
+    // Trouve le membre et met à jour son rôle
+    const memberIndex = list.members.findIndex(m => m.email?.toLowerCase() === memberEmail?.toLowerCase());
+    if (memberIndex === -1) {
+      throw new Error("Membre introuvable");
+    }
+
+    // Construit le nouvel array de membres
+    const updatedMembers = [...list.members];
+    updatedMembers[memberIndex] = { ...updatedMembers[memberIndex], role: newRole };
+    
+    await updateDoc(listRef, { members: updatedMembers });
+  } catch (err) {
+    console.error("[updateMemberRole]", err);
+    throw err;
+  }
+}
+
+// 5c. Met à jour son propre rôle (utilisateur peut changer son propre rôle)
+export async function updateMyRole(listId, userEmail, newRole) {
+  try {
+    if (!["admin", "editor", "viewer"].includes(newRole)) {
+      throw new Error("Rôle invalide. Rôles acceptés: admin, editor, viewer");
+    }
+
+    const listRef = doc(db, "sharedLists", listId);
+    const listSnap = await getDoc(listRef);
+    if (!listSnap.exists()) throw new Error("Liste introuvable");
+    
+    const list = listSnap.data();
+    
+    // Trouve le membre (l'utilisateur courant)
+    const memberIndex = list.members.findIndex(m => m.email?.toLowerCase() === userEmail?.toLowerCase());
+    if (memberIndex === -1) {
+      throw new Error("Vous n'êtes pas membre de cette escouade");
+    }
+
+    // Empêche de passer soi-même admin si on ne l'est pas déjà
+    const currentRole = list.members[memberIndex].role;
+    if (currentRole !== "admin" && newRole === "admin") {
+      throw new Error("Vous ne pouvez pas vous donner le rôle de chef");
+    }
+
+    // Construit le nouvel array de membres
+    const updatedMembers = [...list.members];
+    updatedMembers[memberIndex] = { ...updatedMembers[memberIndex], role: newRole };
+    
+    await updateDoc(listRef, { members: updatedMembers });
+  } catch (err) {
+    console.error("[updateMyRole]", err);
     throw err;
   }
 }

@@ -1,6 +1,6 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
-import { onSnapshot, orderBy, query } from "firebase/firestore";
+import { onSnapshot } from "@firebase/firestore";
 
 /**
  * Hook personnalisé pour les notifications "Corbeau Messager"
@@ -21,36 +21,45 @@ export function useRavenMessenger({
   formatMessage,
   enabled = true,
 }) {
-  const previousDocIdsRef = useRef(new Set());
+  const previousDocIdsRef = useRef(() => new Set());
+  // Garantit la stabilité à travers les remontages du composant
+  const previousDocIdsSet = useMemo(() => {
+    if (typeof previousDocIdsRef.current === "function") {
+      previousDocIdsRef.current = previousDocIdsRef.current();
+    }
+    return previousDocIdsRef.current;
+  }, []);
+
+  const getToastMessage = useCallback(
+    ({ sender, data }) => {
+      return formatMessage
+        ? formatMessage({ sender, data })
+        : `Nouvelle missive de ${sender} : ${data.title}`;
+    },
+    [formatMessage]
+  );
 
   useEffect(() => {
-    if (!collectionQuery || !currentUserEmail || !enabled) {
-      return;
-    }
+    if (!collectionQuery || !currentUserEmail || !enabled) return;
 
     const unsubscribe = onSnapshot(
       collectionQuery,
       (snapshot) => {
         snapshot.docChanges().forEach((change) => {
-          if (change.type === "added") {
-            const docId = change.doc.id;
-            const docData = change.doc.data();
-            const wasNeverSeen = !previousDocIdsRef.current.has(docId);
+          if (change.type !== "added") return;
 
-            // Déclenche la notification seulement si:
-            // 1. Le document n'a jamais été vu (évite les doublons au premier chargement)
-            // 2. Le document a un champ 'addedBy' (pour identification du sender)
-            // 3. Le sender n'est pas l'utilisateur courant
-            if (wasNeverSeen && docData.addedBy && docData.addedBy !== currentUserEmail) {
-              const message = formatMessage
-                ? formatMessage({ sender: docData.addedBy, data: docData })
-                : `Nouvelle missive de ${docData.addedBy} : ${docData.title}`;
+          const docId = change.doc.id;
+          const docData = change.doc.data();
+          const wasNeverSeen = !previousDocIdsSet.has(docId);
 
-              toast(message);
-            }
-
-            previousDocIdsRef.current.add(docId);
+          // Ignore les docs déjà traités ou créés par l'utilisateur courant
+          if (!wasNeverSeen || !docData?.addedBy || docData.addedBy === currentUserEmail) {
+            previousDocIdsSet.add(docId);
+            return;
           }
+
+          toast(getToastMessage({ sender: docData.addedBy, data: docData }));
+          previousDocIdsSet.add(docId);
         });
       },
       (err) => {
@@ -58,6 +67,8 @@ export function useRavenMessenger({
       }
     );
 
-    return () => unsubscribe();
-  }, [collectionQuery, currentUserEmail, formatMessage, enabled]);
+    return () => {
+      unsubscribe && unsubscribe();
+    };
+  }, [collectionQuery, currentUserEmail, enabled, getToastMessage, previousDocIdsSet]);
 }

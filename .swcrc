@@ -1,0 +1,44 @@
+{
+  "jsc": {
+    "parser": {
+      "syntax": "ecmascript",
+      "jsx": true,
+      "tsx": false,
+      "decorators": false,
+      "dynamicImport": true
+    },
+    "transform": {
+      "react": {
+        "runtime": "automatic"
+      },
+      "optimizer": {
+        "globals": {
+          "vars": {
+            "process.env.NODE_ENV": "\"production\""
+          }
+        }
+      }
+    }
+  },
+  "env": {
+    "production": {
+      "jsc": {
+        "minify": {
+          "compress": {
+            "pure_funcs": [
+              "console.log",
+              "console.debug",
+              "console.info",
+              "console.warn"
+            ],
+            "drop_console": true
+          },
+          "mangle": true,
+          "format": {
+            "comments": false
+          }
+        }
+      }
+    }
+  }
+}

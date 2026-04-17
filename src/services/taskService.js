@@ -10,9 +10,11 @@ import {
   getDocs,
   serverTimestamp,
   onSnapshot,
-} from "firebase/firestore";
+} from "@firebase/firestore";
 
-// 1. Récupère toutes les tâches privées d'un utilisateur
+/**
+ * Récupère toutes les tâches privées d'un utilisateur
+ */
 export async function getUserTasks(userId) {
   try {
     const q = query(
@@ -20,13 +22,16 @@ export async function getUserTasks(userId) {
       orderBy("createdAt", "desc")
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
   } catch (err) {
     throw new Error("Impossible de récupérer les tâches : " + err.message);
   }
 }
 
-// 2. Ajoute une tâche privée
+/**
+ * Ajoute une tâche privée
+ */
 export async function addTask(userId, task) {
   try {
     const ref = collection(db, `users/${userId}/tasks`);
@@ -42,7 +47,9 @@ export async function addTask(userId, task) {
   }
 }
 
-// 3. Met à jour une tâche
+/**
+ * Met à jour une tâche
+ */
 export async function updateTask(userId, taskId, updates) {
   try {
     const ref = doc(db, `users/${userId}/tasks/${taskId}`);
@@ -52,7 +59,9 @@ export async function updateTask(userId, taskId, updates) {
   }
 }
 
-// 4. Supprime une tâche
+/**
+ * Supprime une tâche
+ */
 export async function deleteTask(userId, taskId) {
   try {
     const ref = doc(db, `users/${userId}/tasks/${taskId}`);
@@ -62,22 +71,28 @@ export async function deleteTask(userId, taskId) {
   }
 }
 
-// 5. Écoute les changements en temps réel
+/**
+ * Écoute les changements en temps réel des tâches
+ * /!\ IMPORTANT : Utiliser la fonction retournée pour cleanup dans useEffect (React)
+ * @param {string} userId
+ * @param {(tasks: Array, errorMsg?: string|null) => void} callback
+ * @returns {() => void} unsubscribe (à utiliser dans le cleanup du useEffect)
+ */
 export function subscribeToTasks(userId, callback) {
   const q = query(
     collection(db, `users/${userId}/tasks`),
     orderBy("createdAt", "desc")
   );
-  const unsubscribe = onSnapshot(
+  // onSnapshot retourne la fonction de nettoyage (unsubscribe)
+  return onSnapshot(
     q,
     (snapshot) => {
-      const tasks = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      callback(tasks);
+      // Tri côté Firestore déjà garanti par orderBy
+      const tasks = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      callback(tasks, null);
     },
     (err) => {
-      // On peut aussi passer l'erreur au callback si besoin
       callback([], "Erreur de synchronisation des tâches : " + err.message);
     }
   );
-  return unsubscribe;
 }

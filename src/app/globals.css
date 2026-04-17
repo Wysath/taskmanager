@@ -1,18 +1,27 @@
-/* 
-  Critically Render-Blocking Resource Optimization:
-  - Removed direct @import of Google Fonts (Manrope & Inter) to avoid chaining critical font requests, deferring webfont download to Next.js font loading in layout.js via next/font (which preloads and minimizes blocking).
-  - Tailwind CSS import remains, as it is required for atomic utility-first CSS and should be part of the main CSS build.
-  - Font fallbacks remain in custom properties for semantic variable support.
-
-  To load Manrope and Inter optimally, import them via next/font/google in layout.js or top-level JS file.  
+/*
+  -----------------------------------------------------------------------
+  Performance & Optimization Notes:
+  - Google Fonts are NOT imported here: use next/font/google in layout.js for performant, non-blocking font loading.
+  - Only Tailwind CSS is imported for atomic utility and design system compliance.
+  - Avoid placing additional @import rules here; keep CSS thin for fastest style processing.
+  -----------------------------------------------------------------------
+  🔥 Conseil: Importer Manrope et Inter via next/font/google dans layout.js pour réduire le blocking du rendu.
 */
 
 @import "tailwindcss";
 
-/* Monster Hunter Wilds - Grand Livre des Quêtes Styles */
+/* Override Tailwind reset - remove display: block from media elements */
+img, svg, video, canvas, audio, iframe, embed, object {
+  vertical-align: middle;
+  display: inline-block !important;
+}
+
+/* Monster Hunter Wilds - Grand Livre des Quêtes Styles
+   Ces classes assurent l'aspect parchemin/cuivre/os personnalisé du design.
+*/
 
 .parchment-texture {
-  background-image: 
+  background-image:
     repeating-linear-gradient(45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 10px),
     repeating-linear-gradient(-45deg, rgba(0,0,0,0.02) 0px, rgba(0,0,0,0.02) 1px, transparent 1px, transparent 10px),
     radial-gradient(circle at 50% 50%, rgba(255,255,255,0.15), rgba(0,0,0,0.05));
@@ -25,23 +34,27 @@
 }
 
 .valid-stamp {
-  color: #93000a;
-  border: 4px solid #93000a;
+  color: #22c55e;
+  border: 4px solid #22c55e;
   font-family: "Newsreader", serif;
   font-weight: 800;
   padding: 2px 8px;
   transform: rotate(-15deg);
-  background: rgba(147, 0, 10, 0.05);
+  background: rgba(34, 197, 94, 0.05);
 }
 
+/* Monster Hunter - Custom Scrollbar (non-blocking for rendering) */
 .custom-scroll::-webkit-scrollbar {
   width: 6px;
 }
-
 .custom-scroll::-webkit-scrollbar-track {
   background: #3a352e;
 }
-
 .custom-scroll::-webkit-scrollbar-thumb {
   background: #c28e46;
 }
+
+/* Recommendations:
+   - Place NO render-blocking CSS or @import here other than Tailwind.
+   - All fonts and heavy resources should be loaded with Next.js font optimization utilities.
+*/

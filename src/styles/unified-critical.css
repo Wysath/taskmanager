@@ -1,11 +1,4 @@
-/* ============================================
-   DESIGN SYSTEM UNIFIÉ - Monster Hunter Wilds
-   ============================================ */
-
-/* Inline critical CSS here for better LCP performance */
-
 :root {
-  /* Surface & Backgrounds */
   --surface: #151310;
   --surface-container-lowest: #1d1b18;
   --surface-container-low: #211f1c;
@@ -14,43 +7,27 @@
   --surface-container-highest: #3b3935;
   --on-surface: #e3d5b8;
   --on-surface-variant: #d4c4b3;
-  
-  /* Primary & Accent */
   --primary: #c28e46;
   --primary-container: #815511;
   --on-primary: #151310;
   --on-primary-container: #f6bc6f;
-  
-  /* Secondary */
   --secondary: #4d4638;
   --secondary-container: #ede1ce;
   --on-secondary: #e3d5b8;
   --on-secondary-container: #201b0f;
-  
-  /* Error & Status */
   --error: #93000a;
   --error-container: #ffdad6;
   --on-error: #ffffff;
   --on-error-container: #8c0000;
-  
-  /* Outline */
   --outline: #9f9f9f;
   --outline-variant: #504538;
 }
-
-/* ====== CRITICAL STYLES FOR LCP ELEMENTS ====== */
-
-/* Most likely critical: body, headings, p, buttons, cards, section, .list-item, .empty-state.
-   These are included inline to ensure fast first paint. */
-
-/* Typography */
 body {
   font-family: "Inter", sans-serif;
   color: var(--on-surface);
   background-color: var(--surface);
   margin: 0;
 }
-
 h1, h2, h3, h4, h5, h6 {
   font-family: "Manrope", sans-serif;
   color: var(--on-surface);
@@ -88,15 +65,12 @@ h6 {
   line-height: 1.5;
   margin-bottom: 0.5rem;
 }
-
 p {
   font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--on-surface-variant);
   margin: 0 0 1rem 0;
 }
-
-/* Buttons - keep definitions slim for LCP items */
 .btn,
 .btn-primary,
 .btn-secondary {
@@ -115,7 +89,6 @@ p {
   outline: none;
   padding: 0.75rem 1.5rem;
 }
-
 .btn-primary {
   background-color: var(--primary);
   color: var(--on-primary);
@@ -143,8 +116,6 @@ p {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
-/* Cards */
 .card,
 .card-compact,
 .card-elevated {
@@ -162,8 +133,6 @@ p {
   border-color: var(--primary);
   box-shadow: 0 4px 12px rgba(194, 142, 70, 0.15);
 }
-
-/* Section headers */
 .section-header {
   display: flex;
   align-items: center;
@@ -178,8 +147,6 @@ p {
   color: var(--on-surface);
   margin: 0;
 }
-
-/* List Item */
 .list-item {
   padding: 1.25rem;
   background-color: #0a0908;
@@ -196,8 +163,6 @@ p {
   border-color: var(--primary);
   box-shadow: inset 0 0 0 1px rgba(194, 142, 70, 0.2), 0 2px 8px rgba(194, 142, 70, 0.1);
 }
-
-/* Empty State */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -220,34 +185,3 @@ p {
   color: var(--on-surface-variant);
   max-width: 16rem;
 }
-
-@media (max-width: 640px) {
-  .btn-lg {
-    width: 100%;
-  }
-  .modal-footer {
-    display: flex;
-    gap: 1.25rem;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    padding-top: 1.5rem;
-    border-top: 1.5px solid var(--outline-variant);
-    margin-top: auto;
-  }
-  .modal-footer > button {
-    flex: 1;
-    min-width: 120px;
-    margin-top: 0.25rem;
-  }
-  @media (min-width: 640px) {
-    .modal-footer > button {
-      flex: auto;
-      min-width: 140px;
-    }
-  }
-}
-
-/* ===== DEFER NON-CRITICAL CSS =====
-All other CSS should be loaded async/deferred using <link rel="preload" as="style"> or dynamically with JS after initial render.
-You can split the rest of unified.css into a non-critical CSS file (e.g. "unified-noncritical.css") and import it after LCP.
-*/

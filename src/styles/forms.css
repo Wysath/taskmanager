@@ -2,21 +2,8 @@
    FORMULAIRES - Styles pour tous les inputs
    ============================================ */
 
-/* Conteneur formulaire */
 .form {
   @apply flex flex-col gap-4;
-}
-
-.form-group {
-  @apply flex flex-col gap-2;
-}
-
-.form-row {
-  @apply flex flex-col sm:flex-row gap-4;
-}
-
-.form-row-half {
-  @apply flex-1;
 }
 
 .form-label {
@@ -32,79 +19,13 @@
   @apply w-40 sm:w-56 rounded-md bg-transparent px-2 py-1 text-sm text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
 }
 
-/* Inputs génériques */
-.input-base {
-  @apply rounded-lg border border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
-}
-
+/* Inputs */
 .input-sm {
   @apply px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-highest text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container;
 }
 
-.input-lg {
-  @apply h-12 w-full px-4;
-}
-
 .input-text {
-  @apply input-base input-lg placeholder:text-outline disabled:opacity-60 disabled:cursor-not-allowed;
-}
-
-.input-email {
-  @apply input-text;
-}
-
-.input-password {
-  @apply input-text;
-}
-
-.input-text-error {
-  @apply input-text border-error focus-visible:ring-error;
-}
-
-/* Select */
-.select-base {
-  @apply appearance-none rounded-lg bg-surface-container-highest px-4 pr-10 font-medium text-on-surface focus:ring-2 focus:ring-primary-container disabled:opacity-60 disabled:cursor-not-allowed;
-}
-
-.select-lg {
-  @apply h-12 w-full;
-}
-
-.select-styled {
-  @apply select-base select-lg border-none;
-}
-
-/* Textarea */
-.textarea-base {
-  @apply rounded-lg border border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container font-body;
-}
-
-.textarea-lg {
-  @apply w-full min-h-24;
-}
-
-/* Champs avec icônes */
-.input-with-icon {
-  @apply relative;
-}
-
-.input-icon {
-  @apply absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors;
-}
-
-.input-with-icon .input-text {
-  @apply pl-12;
-}
-
-/* Checkbox et Radio */
-.checkbox,
-.radio {
-  @apply cursor-pointer;
-}
-
-.checkbox-label,
-.radio-label {
-  @apply flex items-center gap-2 cursor-pointer;
+  @apply rounded-lg border border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface placeholder:text-outline disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
 }
 
 /* Formulaire d'ajout de tâche */
@@ -112,19 +33,7 @@
   @apply flex flex-col gap-4 mb-8 p-6 bg-surface-container-lowest rounded-xl shadow-sm sm:flex-row border border-outline-variant/20;
 }
 
-.task-form-input {
-  @apply flex-1;
-}
-
-.task-form-priority {
-  @apply relative sm:w-40 w-full;
-}
-
-/* Formulaire d'invitation */
-.invite-form {
-  @apply flex gap-2 mt-2 flex-wrap items-center;
-}
-
+/* Invitation */
 .invite-input {
   @apply px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-highest text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container;
 }

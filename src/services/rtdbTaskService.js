@@ -1,4 +1,5 @@
 
+import { getDbInstance } from "@/lib/firebase";
 import {
   collection,
   query,
@@ -9,13 +10,16 @@ import {
   doc,
   serverTimestamp,
   onSnapshot,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+} from "@firebase/firestore";
 
-// Ajout d'une tâche (Firestore)
+/**
+ * Ajoute une tâche à Firestore
+ * @param {string} userId
+ * @param {{ title: string, priority?: string }} task
+ */
 export async function addTask(userId, task) {
+  const db = getDbInstance();
   const ref = collection(db, `users/${userId}/tasks`);
-  console.log("[addTask] userId:", userId, "task:", task);
   try {
     await addDoc(ref, {
       title: task.title,
@@ -23,43 +27,63 @@ export async function addTask(userId, task) {
       priority: task.priority || "medium",
       createdAt: serverTimestamp(),
     });
-    console.log("[addTask] Tâche ajoutée avec succès");
+    // Optionnel en prod : retirer les logs verbose
+    // console.log("[addTask] Tâche ajoutée pour userId:", userId);
   } catch (err) {
+    // Logging d'erreur précis
     console.error("[addTask] Erreur Firestore:", err);
     throw err;
   }
 }
 
-// Mise à jour d'une tâche (Firestore)
+/**
+ * Met à jour une tâche existante sur Firestore
+ * @param {string} userId
+ * @param {string} taskId
+ * @param {Object} updates
+ */
 export async function updateTask(userId, taskId, updates) {
+  const db = getDbInstance();
   const ref = doc(db, `users/${userId}/tasks/${taskId}`);
   await updateDoc(ref, updates);
 }
 
-// Suppression d'une tâche (Firestore)
+/**
+ * Supprime une tâche de Firestore
+ * @param {string} userId
+ * @param {string} taskId
+ */
 export async function deleteTask(userId, taskId) {
+  const db = getDbInstance();
   const ref = doc(db, `users/${userId}/tasks/${taskId}`);
   await deleteDoc(ref);
 }
 
-// Écoute en temps réel de la liste des tâches (Firestore)
+/**
+ * Souscrit en temps réel à la liste des tâches d'un utilisateur (Firestore)
+ * /!\ Important : La fonction retournée DOIT être utilisée comme cleanup dans un useEffect afin d'éviter les fuites mémoire !
+ * @param {string} userId
+ * @param {(tasks: Array, errorMsg: string|null) => void} callback
+ * @returns {() => void} unsubscribe function
+ */
 export function subscribeToTasks(userId, callback) {
-  console.log("[subscribeToTasks] Initialisation pour userId:", userId);
-  const q = query(
-    collection(db, `users/${userId}/tasks`),
-    orderBy("createdAt", "desc")
-  );
+  const db = getDbInstance();
+  const tasksCollection = collection(db, `users/${userId}/tasks`);
+  const q = query(tasksCollection, orderBy("createdAt", "desc"));
+
+  // OnSnapshot retourne un unsubscribe à utiliser dans le useEffect appelant.
   return onSnapshot(
     q,
     (snapshot) => {
-      const tasks = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      console.log("[subscribeToTasks] Reçu", tasks.length, "tâches");
-      callback(tasks, null); // Pas d'erreur
+      // Transformation optimisée des docs
+      // Tri côté Firestore déjà garanti par orderBy
+      const tasks = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+      callback(tasks, null);
     },
     (err) => {
-      // Gestion d'erreur Firestore
+      // Gestion d'erreur précise
       console.error("[subscribeToTasks] Erreur Firestore:", err.code, err.message);
-      callback([], err.message); // Passe l'erreur comme deuxième paramètre
+      callback([], err.message);
     }
   );
 }

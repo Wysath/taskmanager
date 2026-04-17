@@ -1,26 +1,27 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
+import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { useRavenMessenger } from "@/hooks/useRavenMessenger";
-import CreateListForm from "@/components/CreateListForm";
-import SharedListCard from "@/components/SharedListCard";
-import SharedListView from "@/components/SharedListView";
-import {
-  subscribeToSharedLists,
-  createSharedList,
-  subscribeToSharedTasks,
-  addSharedTask,
-  updateSharedTask,
-  deleteSharedTask,
-  addMemberToList,
-  removeMemberFromList
-} from "@/services/sharedListService";
-import { getDocs, collection, query, where, getDoc, doc, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { Plus, Users, Sword, Crown } from "lucide-react";
+
+const CreateListForm = dynamic(() => import("@/components/CreateListForm"), { ssr: false });
+const SharedListView = dynamic(() => import("@/components/SharedListView"), { ssr: false });
+// Services lazy-loaded in handlers to prevent blocking mobile render
+// import statements moved to dynamic imports in useCallback hooks
+import { Users, Sword, Crown } from "lucide-react";
 
 export default function SharedListsPage() {
+  return (
+    <ProtectedRoute>
+      <SharedListsContent />
+    </ProtectedRoute>
+  );
+}
+
+function SharedListsContent() {
   const { user, loading: authLoading } = useAuth();
   const [lists, setLists] = useState([]);
   const [listsLoading, setListsLoading] = useState(true);
@@ -31,8 +32,8 @@ export default function SharedListsPage() {
   const [tasksError, setTasksError] = useState("");
   const [members, setMembers] = useState([]);
   const [tasksQuery, setTasksQuery] = useState(null);
-  
-  // Abonnement temps réel aux listes partagées
+
+  // Abonnement temps réel aux listes partagées (lazy-load service)
   useEffect(() => {
     if (!user || !user.email) {
       setLists([]);
@@ -41,22 +42,45 @@ export default function SharedListsPage() {
     }
     setListsLoading(true);
     setError("");
-    const unsubscribe = subscribeToSharedLists(user.email, (data, err) => {
-      if (err) {
-        setError(err);
-        setLists([]);
-      } else {
-        setLists(data);
+    
+    (async () => {
+      try {
+        const { subscribeToSharedLists } = await import("@/services/sharedListService");
+        const unsubscribe = subscribeToSharedLists(user.email, (data, err) => {
+          if (err) {
+            setError("Impossible de charger vos escouades. Vérifiez votre connexion.");
+            setLists([]);
+          } else {
+            setLists(data);
+          }
+          setListsLoading(false);
+        });
+        return () => unsubscribe();
+      } catch (err) {
+        const message = "Erreur lors du chargement des escouades.";
+        setError(message);
+        toast.error(message);
+        setListsLoading(false);
       }
-      setListsLoading(false);
-    });
-    return () => unsubscribe();
+    })();
   }, [user]);
 
-  // Création d'une nouvelle liste
+  // Création d'une nouvelle liste (lazy-load service)
   const handleCreateList = useCallback(async (name) => {
-    if (!user) throw new Error("Vous devez être connecté.");
-    await createSharedList(user.uid, name, user.email);
+    if (!user) {
+      toast.error("Vous devez être connecté pour créer une escouade.");
+      return;
+    }
+    try {
+      const { createSharedList } = await import("@/services/sharedListService");
+      await createSharedList(user.uid, name, user.email);
+      toast.success(`Escouade "${name}" créée avec succès`);
+    } catch (err) {
+      const message = err?.message?.includes("permission")
+        ? "Vous n'avez pas la permission de créer une escouade."
+        : "Impossible de créer l'escouade. Vérifiez votre connexion.";
+      toast.error(message);
+    }
   }, [user]);
 
   // Notifications "Corbeau Messager" pour les nouvelles tâches
@@ -66,8 +90,7 @@ export default function SharedListsPage() {
     enabled: !!selectedList && !!user,
   });
 
-  // Gestion ouverture/fermeture d'une liste
-  // Abonnement temps réel aux tâches partagées
+  // Abonnement temps réel aux tâches partagées et récupération membres (lazy-load service & Firebase)
   useEffect(() => {
     if (!selectedList) {
       setSharedTasks([]);
@@ -79,49 +102,208 @@ export default function SharedListsPage() {
     }
     setTasksLoading(true);
     setTasksError("");
-    // Abonnement temps réel aux tâches
-    const unsubscribe = subscribeToSharedTasks(selectedList.id, (tasks, err) => {
-      if (err) {
-        setTasksError(err);
-        setSharedTasks([]);
-      } else {
-        setSharedTasks(tasks);
-      }
-      setTasksLoading(false);
-    });
-    // Crée la requête pour le hook useRavenMessenger
-    const q = query(
-      collection(db, `sharedLists/${selectedList.id}/tasks`),
-      orderBy("createdAt", "desc")
-    );
-    setTasksQuery(q);
     
-    // Récupération des infos membres
-    async function fetchMembers() {
-      if (!selectedList.members || selectedList.members.length === 0) {
-        setMembers([]);
-        return;
+    (async () => {
+      try {
+        const { subscribeToSharedTasks } = await import("@/services/sharedListService");
+        const { collection, query, orderBy } = await import("@firebase/firestore");
+        const { db } = await import("@/lib/firebase");
+
+        const unsubscribe = subscribeToSharedTasks(selectedList.id, (tasks, err) => {
+          if (err) {
+            setTasksError("Impossible de charger les tâches. Vérifiez votre accès.");
+            setSharedTasks([]);
+          } else {
+            setSharedTasks(tasks);
+          }
+          setTasksLoading(false);
+        });
+
+        const q = query(
+          collection(db, `sharedLists/${selectedList.id}/tasks`),
+          orderBy("createdAt", "desc")
+        );
+        setTasksQuery(q);
+
+        if (!selectedList.members || selectedList.members.length === 0) {
+          setMembers([]);
+        } else {
+          setMembers(selectedList.members);
+        }
+
+        return () => {
+          if (unsubscribe) unsubscribe();
+        };
+      } catch (err) {
+        const message = "Erreur lors du chargement des tâches de l'escouade.";
+        setTasksError(message);
+        toast.error(message);
+        setTasksLoading(false);
       }
-      // Les membres sont déjà structurés comme {email, role} dans selectedList
-      // On peut les utiliser directement
-      setMembers(selectedList.members);
-    }
-    fetchMembers();
-    return () => unsubscribe();
+    })();
   }, [selectedList]);
 
-  const handleOpenList = (list) => setSelectedList(list);
-  const handleCloseList = () => {
+  // Fonctions optimisées avec useCallback
+  const handleOpenList = useCallback((list) => setSelectedList(list), []);
+  const handleCloseList = useCallback(() => {
     setSelectedList(null);
     setSharedTasks([]);
     setTasksError("");
     setTasksLoading(false);
-  };
+  }, []);
+
+  const handleAddTask = useCallback(
+    async ({ title, priority }) => {
+      if (!selectedList || !user) {
+        toast.error("Vous devez être connecté et avoir sélectionné une escouade.");
+        return;
+      }
+      try {
+        const { addSharedTask } = await import("@/services/sharedListService");
+        await addSharedTask(selectedList.id, user.email, { title, priority });
+        toast.success("Tâche ajoutée à l'escouade");
+      } catch (err) {
+        const message = "Impossible d'ajouter la tâche. Vérifiez votre accès.";
+        toast.error(message);
+      }
+    },
+    [selectedList, user]
+  );
+
+  const handleUpdateTask = useCallback(
+    async (taskId, updates) => {
+      if (!selectedList) {
+        toast.error("Aucune escouade sélectionnée.");
+        return;
+      }
+      try {
+        const { updateSharedTask } = await import("@/services/sharedListService");
+        await updateSharedTask(selectedList.id, taskId, updates);
+        if (updates.completed !== undefined) {
+          toast.success(updates.completed ? "Tâche complétée ! ✅" : "Tâche réactivée");
+        }
+      } catch (err) {
+        toast.error("Impossible de mettre à jour la tâche. Vérifiez votre accès.");
+      }
+    },
+    [selectedList]
+  );
+
+  const handleDeleteTask = useCallback(
+    async (taskId) => {
+      if (!selectedList) {
+        toast.error("Aucune escouade sélectionnée.");
+        return;
+      }
+      try {
+        const { deleteSharedTask } = await import("@/services/sharedListService");
+        await deleteSharedTask(selectedList.id, taskId);
+        toast.success("Tâche supprimée");
+      } catch (err) {
+        toast.error("Impossible de supprimer la tâche. Vérifiez votre accès.");
+      }
+    },
+    [selectedList]
+  );
+
+  const handleAddMember = useCallback(
+    async (email) => {
+      if (!selectedList) {
+        toast.error("Aucune escouade sélectionnée.");
+        return;
+      }
+      try {
+        const { addMemberToList } = await import("@/services/sharedListService");
+        await addMemberToList(selectedList.id, email);
+        toast.success(`${email} a été invité à l'escouade`);
+      } catch (err) {
+        const message = err?.message?.includes("already") 
+          ? `${email} est déjà dans l'escouade.`
+          : err?.message?.includes("not found")
+          ? `${email} n'existe pas.`
+          : "Impossible d'inviter le membre. Vérifiez votre accès.";
+        toast.error(message);
+      }
+    },
+    [selectedList]
+  );
+
+  const handleRemoveMember = useCallback(
+    async (memberEmail) => {
+      if (!selectedList) {
+        toast.error("Aucune escouade sélectionnée.");
+        return;
+      }
+      if (!user) {
+        toast.error("Vous devez être connecté.");
+        return;
+      }
+      try {
+        const { removeMemberFromList } = await import("@/services/sharedListService");
+        await removeMemberFromList(selectedList.id, memberEmail, user.uid);
+        setMembers(prevMembers => prevMembers.filter(m => m.email?.toLowerCase() !== memberEmail?.toLowerCase()));
+        toast.success(`${memberEmail} a été retiré de l'escouade`);
+      } catch (err) {
+        const message = err?.message?.includes("permission")
+          ? "Seul l'administrateur peut retirer des membres."
+          : "Impossible de retirer le membre. Vérifiez votre accès.";
+        toast.error(message);
+      }
+    },
+    [selectedList, user]
+  );
+
+  const handleUpdateMemberRole = useCallback(
+    async (memberEmail, newRole) => {
+      if (!selectedList) {
+        toast.error("Aucune escouade sélectionnée.");
+        return;
+      }
+      if (!user) {
+        toast.error("Vous devez être connecté.");
+        return;
+      }
+      try {
+        const { updateMemberRole } = await import("@/services/sharedListService");
+        await updateMemberRole(selectedList.id, memberEmail, newRole, user.uid);
+        setMembers(prevMembers => 
+          prevMembers.map(m => 
+            m.email?.toLowerCase() === memberEmail?.toLowerCase() 
+              ? { ...m, role: newRole }
+              : m
+          )
+        );
+        const roleLabel = newRole === "admin" ? "Chef" : newRole === "editor" ? "Éditeur" : "Lecteur";
+        toast.success(`Rôle de ${memberEmail} mis à jour en ${roleLabel}`);
+      } catch (err) {
+        const message = err?.message?.includes("permission")
+          ? "Seul l'administrateur peut modifier les rôles."
+          : "Impossible de mettre à jour le rôle. Vérifiez votre accès.";
+        toast.error(message);
+      }
+    },
+    [selectedList, user]
+  );
+
+  // Memo des tâches enrichies avec l'email de l'auteur (performance ++)
+  const processedTasks = useMemo(
+    () =>
+      sharedTasks.map((task) => ({
+        ...task,
+        // Affiche l'email de l'auteur si possible
+        addedBy:
+          members.find((m) => m.email?.toLowerCase() === task.addedBy?.toLowerCase())?.email ||
+          task.addedBy,
+      })),
+    [sharedTasks, members]
+  );
 
   if (authLoading || listsLoading) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-[#151310] text-[#e3d5b8]">
-        <div className="text-lg font-headline uppercase tracking-widest text-[#c28e46]">Chargement des Escouades...</div>
+      <main className="min-h-screen s flex-col items-center justify-center bg-[#151310] text-[#e3d5b8]">
+        <div className="text-lg font-headline uppercase tracking-widest text-[#c28e46]">
+          Chargement des Escouades...
+        </div>
       </main>
     );
   }
@@ -129,7 +311,9 @@ export default function SharedListsPage() {
   if (!user) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center bg-[#151310] text-[#e3d5b8]">
-        <div className="text-lg font-headline uppercase tracking-widest text-[#c28e46]">Veuillez vous connecter pour accéder aux Escouades.</div>
+        <div className="text-lg font-headline uppercase tracking-widest text-[#c28e46]">
+          Veuillez vous connecter pour accéder aux Escouades.
+        </div>
       </main>
     );
   }
@@ -144,7 +328,9 @@ export default function SharedListsPage() {
             <h1 className="text-5xl font-headline text-[#c28e46] uppercase tracking-widest">Les Escouades</h1>
             <Users size={32} className="text-[#c28e46]" />
           </div>
-          <p className="text-[#8a8171] font-label text-sm uppercase tracking-wider">Regroupez-vous pour accomplir de plus grandes quêtes</p>
+          <p className="text-[#8a8171] font-label text-sm uppercase tracking-wider">
+            Regroupez-vous pour accomplir de plus grandes quêtes
+          </p>
           <div className="h-1 w-24 bg-[#c28e46] mx-auto mt-4"></div>
         </div>
 
@@ -155,11 +341,13 @@ export default function SharedListsPage() {
           </div>
         )}
 
-        {!selectedList && (
+        {!selectedList ? (
           <>
             {/* Create Squad Form */}
             <div className="bg-[#211f1c] border-4 border-[#504538] p-8">
-              <h2 className="font-headline text-2xl text-[#c28e46] mb-6 uppercase tracking-widest">Former une nouvelle Escouade</h2>
+              <h2 className="font-headline text-2xl text-[#c28e46] mb-6 uppercase tracking-widest">
+                Former une nouvelle Escouade
+              </h2>
               <CreateListForm onCreateList={handleCreateList} />
             </div>
 
@@ -173,7 +361,9 @@ export default function SharedListsPage() {
                   <div className="text-[#8a8171] font-label text-sm uppercase tracking-wider mb-4">
                     Aucune Escouade pour le moment.
                   </div>
-                  <p className="text-[#5c564c] font-body text-sm">Créez votre première Escouade pour recruter des Chasseurs et accomplir des quêtes ensemble!</p>
+                  <p className="text-[#5c564c] font-body text-sm">
+                    Créez votre première Escouade pour recruter des Chasseurs et accomplir des quêtes ensemble!
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,7 +379,8 @@ export default function SharedListsPage() {
                             {list.name}
                           </h3>
                           <p className="text-[#8a8171] font-label text-xs uppercase tracking-wider flex items-center gap-1">
-                            <Users size={14} /> {list.members?.length || 0} Chasseur{(list.members?.length || 0) > 1 ? "s" : ""}
+                            <Users size={14} /> {list.members?.length || 0} Chasseur
+                            {(list.members?.length || 0) > 1 ? "s" : ""}
                           </p>
                         </div>
                         <div className="text-[#c28e46]">
@@ -208,36 +399,20 @@ export default function SharedListsPage() {
               )}
             </div>
           </>
-        )}
-
-        {selectedList && (
+        ) : (
           <SharedListView
             list={selectedList}
-            tasks={sharedTasks}
+            tasks={processedTasks}
             currentUserId={user.uid}
             currentUserEmail={user.email}
             members={members}
             onBack={handleCloseList}
-            onAddTask={async ({ title, priority }) => {
-              await addSharedTask(selectedList.id, user.uid, { title, priority });
-            }}
-            onUpdateTask={async (taskId, updates) => {
-              await updateSharedTask(selectedList.id, taskId, updates);
-            }}
-            onDeleteTask={async (taskId) => {
-              await deleteSharedTask(selectedList.id, taskId);
-            }}
-            onAddMember={async (email) => {
-                await addMemberToList(selectedList.id, email);
-            }}
-                        tasks={sharedTasks.map(task => ({
-                          ...task,
-                          // Affiche l'email de l'auteur si possible
-                          addedBy: members.find(m => m.email?.toLowerCase() === task.addedBy?.toLowerCase())?.email || task.addedBy
-                        }))}
-            onRemoveMember={async (memberEmail) => {
-              await removeMemberFromList(selectedList.id, memberEmail, user.uid);
-            }}
+            onAddTask={handleAddTask}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+            onAddMember={handleAddMember}
+            onRemoveMember={handleRemoveMember}
+            onUpdateMemberRole={handleUpdateMemberRole}
             tasksLoading={tasksLoading}
             tasksError={tasksError}
           />

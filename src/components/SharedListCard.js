@@ -1,12 +1,25 @@
 "use client";
 
+import { useMemo, useCallback } from "react";
 import { Users, Trash2, Crown, ListChecks } from "lucide-react";
 
 export default function SharedListCard({ list, currentUserId, onOpen, onDelete }) {
-  const isOwner = list.ownerId === currentUserId;
-  const totalTasks = list.tasksCount ?? 0;
-  const completedTasks = list.completedTasksCount ?? 0;
-  const membersCount = list.members?.length ?? 0;
+  // Memo : calcul des propriétés dérivées pour éviter des recalculs inutiles
+  const { isOwner, totalTasks, completedTasks, membersCount } = useMemo(() => ({
+    isOwner: list.ownerId === currentUserId,
+    totalTasks: list.tasksCount ?? 0,
+    completedTasks: list.completedTasksCount ?? 0,
+    membersCount: list.members?.length ?? 0,
+  }), [list, currentUserId]);
+
+  // Callbacks mémorisés pour éviter les rerenders des enfants et une meilleure stabilité des props
+  const handleOpen = useCallback(() => {
+    onOpen?.(list);
+  }, [onOpen, list]);
+
+  const handleDelete = useCallback(() => {
+    onDelete?.(list);
+  }, [onDelete, list]);
 
   return (
     <article
@@ -38,7 +51,7 @@ export default function SharedListCard({ list, currentUserId, onOpen, onDelete }
       <div className="flex gap-2 mt-2">
         <button
           type="button"
-          onClick={() => onOpen?.(list)}
+          onClick={handleOpen}
           className="flex-1 px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold hover:bg-primary/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2 transition-colors"
           aria-label={`Ouvrir la liste ${list.name}`}
         >
@@ -47,7 +60,7 @@ export default function SharedListCard({ list, currentUserId, onOpen, onDelete }
         {isOwner && (
           <button
             type="button"
-            onClick={() => onDelete?.(list)}
+            onClick={handleDelete}
             className="px-4 py-2 rounded-lg bg-error text-on-error font-semibold hover:bg-error/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-error-container focus-visible:ring-offset-2 transition-colors"
             aria-label={`Supprimer la liste ${list.name}`}
           >

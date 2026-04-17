@@ -1,4 +1,4 @@
-import {
+import { 
   collection,
   doc,
   addDoc,
@@ -12,13 +12,14 @@ import {
   deleteDoc,
   arrayUnion,
   arrayRemove,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+  serverTimestamp 
+} from "@firebase/firestore";
+import { getDbInstance } from "@/lib/firebase";
 
-// 1. Crée une nouvelle liste partagée
+// Crée une nouvelle liste partagée (escouade)
 export async function createSharedList(userId, name, userEmail) {
   try {
+    const db = getDbInstance();
     const ref = collection(db, "sharedLists");
     const docRef = await addDoc(ref, {
       name,
@@ -38,18 +39,21 @@ export async function createSharedList(userId, name, userEmail) {
   }
 }
 
-// 2. Récupère les listes où l'utilisateur est membre
+// Récupère les listes partagées auxquelles l'utilisateur appartient
 export async function getUserSharedLists(userEmail) {
   try {
-    // Récupère toutes les listes et filtre côté client
+    const db = getDbInstance();
     const ref = collection(db, "sharedLists");
     const snap = await getDocs(ref);
+    const lowerEmail = userEmail?.toLowerCase();
+    // Comparaison insensible à la casse
     const lists = snap.docs
       .map((doc) => ({ id: doc.id, ...doc.data() }))
       .filter((list) => {
-        // Filtre les listes où l'utilisateur est membre
-        if (!Array.isArray(list.members)) return false;
-        return list.members.some((m) => m.email === userEmail || m.email?.toLowerCase() === userEmail?.toLowerCase());
+        const members = Array.isArray(list.members) ? list.members : [];
+        return members.some(
+          (m) => m.email === userEmail || m.email?.toLowerCase() === lowerEmail
+        );
       });
     return lists;
   } catch (err) {
@@ -58,18 +62,22 @@ export async function getUserSharedLists(userEmail) {
   }
 }
 
-// 3. Écoute en temps réel les listes partagées
+// Écoute en temps réel les listes partagées de l'utilisateur
 export function subscribeToSharedLists(userEmail, callback) {
+  const db = getDbInstance();
   const ref = collection(db, "sharedLists");
+  const lowerEmail = userEmail?.toLowerCase();
+
   return onSnapshot(
     ref,
     (snap) => {
       const lists = snap.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
         .filter((list) => {
-          // Filtre les listes où l'utilisateur est membre
-          if (!Array.isArray(list.members)) return false;
-          return list.members.some((m) => m.email === userEmail || m.email?.toLowerCase() === userEmail?.toLowerCase());
+          const members = Array.isArray(list.members) ? list.members : [];
+          return members.some(
+            (m) => m.email === userEmail || m.email?.toLowerCase() === lowerEmail
+          );
         });
       callback(lists, null);
     },
@@ -83,15 +91,16 @@ export function subscribeToSharedLists(userEmail, callback) {
 // 4. Ajoute un membre par email avec le rôle 'editor'
 export async function addMemberToList(listId, email) {
   try {
+    const db = getDbInstance();
     const normalizedEmail = email.trim().toLowerCase();
-    
-    // Cherche l'utilisateur par email (avec lowercase pour robustesse)
+
+    // Recherche par email normalisé coté Firestore (si possible)
     const usersQ = query(
-      collection(db, "users"), 
+      collection(db, "users"),
       where("email", "==", normalizedEmail)
     );
     const usersSnap = await getDocs(usersQ);
-    
+
     if (!usersSnap.empty) {
       const listRef = doc(db, "sharedLists", listId);
       await updateDoc(listRef, { 
@@ -99,15 +108,14 @@ export async function addMemberToList(listId, email) {
       });
       return normalizedEmail;
     }
-    
-    // Fallback : cherche tous les users et filtre par email localement (cas où l'email est stocké en casse différente)
-    const allUsersQ = query(collection(db, "users"));
-    const allUsersSnap = await getDocs(allUsersQ);
+
+    // Fallback : Cherche tous les users et filtre localement par email (cas sensible)
+    const allUsersSnap = await getDocs(collection(db, "users"));
     const matchingUser = allUsersSnap.docs.find(doc => {
       const userEmail = doc.data().email?.trim().toLowerCase();
       return userEmail === normalizedEmail;
     });
-    
+
     if (matchingUser) {
       const listRef = doc(db, "sharedLists", listId);
       await updateDoc(listRef, { 
@@ -115,7 +123,7 @@ export async function addMemberToList(listId, email) {
       });
       return normalizedEmail;
     }
-    
+
     throw new Error(`Aucun utilisateur trouvé avec l'email ${email}. Assurez-vous que cet utilisateur s'est inscrit.`);
   } catch (err) {
     console.error("[addMemberToList]", err);
@@ -126,14 +134,20 @@ export async function addMemberToList(listId, email) {
 // 5. Retire un membre (seul l'admin peut)
 export async function removeMemberFromList(listId, memberEmail, currentUserId) {
   try {
+    const db = getDbInstance();
     const listRef = doc(db, "sharedLists", listId);
     const listSnap = await getDoc(listRef);
+
     if (!listSnap.exists()) throw new Error("Liste introuvable");
+
     const list = listSnap.data();
-    if (list.ownerId !== currentUserId) throw new Error("Seul l'administrateur peut retirer un membre");
+
+    if (list.ownerId !== currentUserId)
+      throw new Error("Seul l'administrateur peut retirer un membre");
     
-    // Trouve et retire le membre avec cet email
-    const memberToRemove = list.members.find(m => m.email?.toLowerCase() === memberEmail?.toLowerCase());
+    const memberToRemove = list.members.find(
+      m => m.email?.toLowerCase() === memberEmail?.toLowerCase()
+    );
     if (memberToRemove) {
       await updateDoc(listRef, { members: arrayRemove(memberToRemove) });
     }
@@ -146,6 +160,7 @@ export async function removeMemberFromList(listId, memberEmail, currentUserId) {
 // 5b. Met à jour le rôle d'un membre (seul l'admin peut)
 export async function updateMemberRole(listId, memberEmail, newRole, currentUserId) {
   try {
+    const db = getDbInstance();
     if (!["admin", "editor", "viewer"].includes(newRole)) {
       throw new Error("Rôle invalide. Rôles acceptés: admin, editor, viewer");
     }
@@ -153,22 +168,22 @@ export async function updateMemberRole(listId, memberEmail, newRole, currentUser
     const listRef = doc(db, "sharedLists", listId);
     const listSnap = await getDoc(listRef);
     if (!listSnap.exists()) throw new Error("Liste introuvable");
-    
+
     const list = listSnap.data();
     if (list.ownerId !== currentUserId) {
       throw new Error("Seul l'administrateur peut modifier les rôles des membres");
     }
-    
-    // Trouve le membre et met à jour son rôle
-    const memberIndex = list.members.findIndex(m => m.email?.toLowerCase() === memberEmail?.toLowerCase());
+
+    const memberIndex = list.members.findIndex(
+      m => m.email?.toLowerCase() === memberEmail?.toLowerCase()
+    );
     if (memberIndex === -1) {
       throw new Error("Membre introuvable");
     }
 
-    // Construit le nouvel array de membres
     const updatedMembers = [...list.members];
     updatedMembers[memberIndex] = { ...updatedMembers[memberIndex], role: newRole };
-    
+
     await updateDoc(listRef, { members: updatedMembers });
   } catch (err) {
     console.error("[updateMemberRole]", err);
@@ -179,6 +194,7 @@ export async function updateMemberRole(listId, memberEmail, newRole, currentUser
 // 5c. Met à jour son propre rôle (utilisateur peut changer son propre rôle)
 export async function updateMyRole(listId, userEmail, newRole) {
   try {
+    const db = getDbInstance();
     if (!["admin", "editor", "viewer"].includes(newRole)) {
       throw new Error("Rôle invalide. Rôles acceptés: admin, editor, viewer");
     }
@@ -186,25 +202,24 @@ export async function updateMyRole(listId, userEmail, newRole) {
     const listRef = doc(db, "sharedLists", listId);
     const listSnap = await getDoc(listRef);
     if (!listSnap.exists()) throw new Error("Liste introuvable");
-    
+
     const list = listSnap.data();
-    
-    // Trouve le membre (l'utilisateur courant)
-    const memberIndex = list.members.findIndex(m => m.email?.toLowerCase() === userEmail?.toLowerCase());
+
+    const memberIndex = list.members.findIndex(
+      m => m.email?.toLowerCase() === userEmail?.toLowerCase()
+    );
     if (memberIndex === -1) {
       throw new Error("Vous n'êtes pas membre de cette escouade");
     }
 
-    // Empêche de passer soi-même admin si on ne l'est pas déjà
     const currentRole = list.members[memberIndex].role;
     if (currentRole !== "admin" && newRole === "admin") {
       throw new Error("Vous ne pouvez pas vous donner le rôle de chef");
     }
 
-    // Construit le nouvel array de membres
     const updatedMembers = [...list.members];
     updatedMembers[memberIndex] = { ...updatedMembers[memberIndex], role: newRole };
-    
+
     await updateDoc(listRef, { members: updatedMembers });
   } catch (err) {
     console.error("[updateMyRole]", err);
@@ -215,17 +230,20 @@ export async function updateMyRole(listId, userEmail, newRole) {
 // 6. Supprime la liste (et ses tâches)
 export async function deleteSharedList(listId, userId) {
   try {
+    const db = getDbInstance();
     const listRef = doc(db, "sharedLists", listId);
     const listSnap = await getDoc(listRef);
     if (!listSnap.exists()) throw new Error("Liste introuvable");
     const list = listSnap.data();
     if (list.ownerId !== userId) throw new Error("Seul le propriétaire peut supprimer la liste");
+
     // Supprime toutes les tâches
     const tasksRef = collection(db, `sharedLists/${listId}/tasks`);
     const tasksSnap = await getDocs(tasksRef);
     const batch = [];
     tasksSnap.forEach((taskDoc) => batch.push(deleteDoc(taskDoc.ref)));
     await Promise.all(batch);
+
     await deleteDoc(listRef);
   } catch (err) {
     console.error("[deleteSharedList]", err);
@@ -236,7 +254,12 @@ export async function deleteSharedList(listId, userId) {
 // 7. Récupère les tâches d'une liste partagée
 export async function getSharedListTasks(listId) {
   try {
-    const q = query(collection(db, `sharedLists/${listId}/tasks`), orderBy("createdAt", "desc"));
+    const db = getDbInstance();
+    // Trie "lourd" à mémoriser si le tableau est volumineux. Utilise sort natif car snapshot Firestore "orderBy"
+    const q = query(
+      collection(db, `sharedLists/${listId}/tasks`),
+      orderBy("createdAt", "desc")
+    );
     const snap = await getDocs(q);
     return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (err) {
@@ -246,15 +269,16 @@ export async function getSharedListTasks(listId) {
 }
 
 // 8. Ajoute une tâche à une liste partagée
-export async function addSharedTask(listId, userId, task) {
+export async function addSharedTask(listId, userEmail, task) {
   try {
+    const db = getDbInstance();
     const ref = collection(db, `sharedLists/${listId}/tasks`);
     await addDoc(ref, {
       title: task.title,
       completed: false,
       priority: task.priority || "medium",
       createdAt: serverTimestamp(),
-      addedBy: userId,
+      addedBy: userEmail,
     });
   } catch (err) {
     console.error("[addSharedTask]", err);
@@ -265,6 +289,7 @@ export async function addSharedTask(listId, userId, task) {
 // 9. Met à jour une tâche partagée
 export async function updateSharedTask(listId, taskId, updates) {
   try {
+    const db = getDbInstance();
     const ref = doc(db, `sharedLists/${listId}/tasks/${taskId}`);
     await updateDoc(ref, updates);
   } catch (err) {
@@ -276,6 +301,7 @@ export async function updateSharedTask(listId, taskId, updates) {
 // 10. Supprime une tâche partagée
 export async function deleteSharedTask(listId, taskId) {
   try {
+    const db = getDbInstance();
     const ref = doc(db, `sharedLists/${listId}/tasks/${taskId}`);
     await deleteDoc(ref);
   } catch (err) {
@@ -286,11 +312,19 @@ export async function deleteSharedTask(listId, taskId) {
 
 // 11. Écoute les tâches en temps réel
 export function subscribeToSharedTasks(listId, callback) {
-  const q = query(collection(db, `sharedLists/${listId}/tasks`), orderBy("createdAt", "desc"));
+  const db = getDbInstance();
+  const q = query(
+    collection(db, `sharedLists/${listId}/tasks`),
+    orderBy("createdAt", "desc")
+  );
+  // Respect du pattern : la fonction retournée par onSnapshot = nettoyage (pour useEffect notamment)
   return onSnapshot(
     q,
     (snap) => {
-      callback(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })), null);
+      callback(
+        snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+        null
+      );
     },
     (err) => {
       console.error("[subscribeToSharedTasks]", err);

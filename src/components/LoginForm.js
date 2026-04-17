@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,34 +17,57 @@ const LoginForm = () => {
   // Redirection si l'utilisateur est déjà connecté
   useEffect(() => {
     if (!loading && user) {
-      router.push("/");
+      router.replace("/");
     }
   }, [user, loading, router]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setFormError("");
-    setFormLoading(true);
-    try {
-      await signIn(email, password);
-    } catch (err) {
-      setFormError(error || "Erreur lors de la connexion.");
-    } finally {
-      setFormLoading(false);
+  // Synchroniser l'erreur du contexte avec le formulaire
+  useEffect(() => {
+    if (error && !formError) {
+      setFormError(error);
     }
-  };
+  }, [error, formError]);
 
-  const handleGoogle = async () => {
-    setFormError("");
-    setFormLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      setFormError(error || "Erreur lors de la connexion Google.");
-    } finally {
-      setFormLoading(false);
-    }
-  };
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setFormError("");
+      setFormLoading(true);
+      try {
+        await signIn(email, password);
+        // Réussi : le useEffect se chargera de la redirection
+      } catch (err) {
+        // Afficher l'erreur du contexte (déjà définie par signIn)
+        setFormError(error || "Erreur lors de la connexion.");
+      } finally {
+        setFormLoading(false);
+      }
+    },
+    [signIn, email, password, error]
+  );
+
+  const handleGoogle = useCallback(
+    async () => {
+      setFormError("");
+      setFormLoading(true);
+      try {
+        await signInWithGoogle();
+        // Réussi : le useEffect se chargera de la redirection
+      } catch (err) {
+        // Afficher l'erreur du contexte (déjà définie par signInWithGoogle)
+        setFormError(error || "Erreur lors de la connexion Google.");
+      } finally {
+        setFormLoading(false);
+      }
+    },
+    [signInWithGoogle, error]
+  );
+
+  const handleEmailChange = useCallback((e) => setEmail(e.target.value), []);
+  const handlePasswordChange = useCallback((e) => setPassword(e.target.value), []);
+
+  const isLoading = formLoading || loading;
+  const displayError = formError || error;
 
   return (
     <form
@@ -53,12 +76,12 @@ const LoginForm = () => {
       aria-label="Formulaire de connexion"
       autoComplete="off"
     >
-      {(formError || error) && (
+      {displayError && (
         <div className="text-[#ffb4ab] text-sm font-medium bg-[#93000a]/20 p-3 border border-[#93000a]/50 rounded" role="alert">
-          {formError || error}
+          {displayError}
         </div>
       )}
-      
+
       <div>
         <label htmlFor="email" className="block mb-2 text-[#c28e46] font-label text-xs uppercase font-semibold tracking-wider">
           E-mail
@@ -67,7 +90,7 @@ const LoginForm = () => {
           id="email"
           type="email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={handleEmailChange}
           placeholder="hunter@example.com"
           required
           className="w-full bg-[#2c2a26] border-2 border-[#504538] text-[#e3d5b8] px-4 py-3 placeholder-[#8a8171] focus:border-[#c28e46] focus:outline-none transition-colors font-body"
@@ -82,7 +105,7 @@ const LoginForm = () => {
           id="password"
           type="password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={handlePasswordChange}
           placeholder="••••••••"
           required
           className="w-full bg-[#2c2a26] border-2 border-[#504538] text-[#e3d5b8] px-4 py-3 placeholder-[#8a8171] focus:border-[#c28e46] focus:outline-none transition-colors font-body"
@@ -91,17 +114,17 @@ const LoginForm = () => {
 
       <button
         type="submit"
-        disabled={formLoading || loading}
+        disabled={isLoading}
         className="w-full bg-[#c28e46] text-[#151310] py-3 font-headline font-bold uppercase tracking-widest hover:bg-[#e8b879] disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
       >
         <LogIn size={18} />
-        {formLoading || loading ? "Connexion..." : "Se connecter"}
+        {isLoading ? "Connexion..." : "Se connecter"}
       </button>
 
       <button
         type="button"
         onClick={handleGoogle}
-        disabled={formLoading || loading}
+        disabled={isLoading}
         className="w-full bg-[#2c2a26] text-[#e8e1dc] border-2 border-[#c28e46] py-3 font-headline font-bold uppercase tracking-widest hover:bg-[#3a3835] disabled:opacity-60 transition-colors"
       >
         Google

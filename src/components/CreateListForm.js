@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Plus } from "lucide-react";
 
 export default function CreateListForm({ onCreateList }) {
@@ -8,23 +8,31 @@ export default function CreateListForm({ onCreateList }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    if (!name.trim()) {
-      setError("Le nom de l'Escouade est obligatoire.");
-      return;
-    }
-    setLoading(true);
-    try {
-      await onCreateList?.(name.trim());
-      setName("");
-    } catch (err) {
-      setError(err.message || "Erreur lors de la création de l'Escouade.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleNameChange = useCallback((e) => {
+    setName(e.target.value);
+  }, []);
+
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setError("");
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        setError("Le nom de l'Escouade est obligatoire.");
+        return;
+      }
+      setLoading(true);
+      try {
+        await onCreateList?.(trimmedName);
+        setName("");
+      } catch (err) {
+        setError(err.message || "Erreur lors de la création de l'Escouade.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [name, onCreateList]
+  );
 
   return (
     <form
@@ -34,7 +42,10 @@ export default function CreateListForm({ onCreateList }) {
       autoComplete="off"
     >
       <div className="flex-1 w-full">
-        <label htmlFor="list-name" className="block mb-2 text-[#c28e46] font-headline text-sm font-bold uppercase tracking-wider">
+        <label
+          htmlFor="list-name"
+          className="block mb-2 text-[#c28e46] font-headline text-sm font-bold uppercase tracking-wider"
+        >
           Nom de l'Escouade
         </label>
         <input
@@ -49,7 +60,11 @@ export default function CreateListForm({ onCreateList }) {
           aria-invalid={!!error}
           disabled={loading}
         />
-        {error && <div className="text-[#ffb4ab] text-xs mt-2 font-medium" role="alert">{error}</div>}
+        {error ? (
+          <div className="text-[#ffb4ab] text-xs mt-2 font-medium" role="alert">
+            {error}
+          </div>
+        ) : null}
       </div>
       <button
         type="submit"

@@ -2,20 +2,6 @@
    SHARED LISTS - Styles pour les listes partagées
    ============================================ */
 
-/* Conteneur liste partagée */
-.shared-list-view {
-  @apply max-w-2xl mx-auto w-full bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/20 p-6 mt-6 font-body;
-}
-
-.shared-list-header {
-  @apply flex items-center gap-2 mb-4 text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
-}
-
-.shared-list-title {
-  @apply text-2xl font-bold text-on-surface mb-2;
-}
-
-/* Membres */
 .members-section {
   @apply mb-6;
 }
@@ -44,21 +30,13 @@
   @apply ml-1 p-1 rounded-full hover:bg-error/10 text-error focus:outline-none focus-visible:ring-2 focus-visible:ring-error-container;
 }
 
-/* Formulaire d'invitation */
+/* Section d'invitation */
 .invite-section {
   @apply mt-2;
 }
 
 .invite-form-group {
   @apply flex gap-2 items-center flex-wrap;
-}
-
-.invite-input {
-  @apply px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-highest text-on-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container;
-}
-
-.invite-btn {
-  @apply flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-on-primary font-semibold hover:bg-primary/90 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-container focus-visible:ring-offset-2;
 }
 
 .invite-error {

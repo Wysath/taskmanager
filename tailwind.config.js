@@ -1,78 +1,109 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx}",
+    "./src/components/**/*.{js,ts,jsx,tsx}",
+    "./src/contexts/**/*.{js,ts,jsx,tsx}",
+    "./src/hooks/**/*.{js,ts,jsx,tsx}",
+    "./src/services/**/*.{js,ts,jsx,tsx}",
+    "./src/styles/**/*.{css,scss}",
+    "./src/lib/**/*.{js,ts,jsx,tsx}",
+  ],
+  // Phase 6: Safelist for dynamically generated classes (rarely used)
+  safelist: [
+    // Dynamic grid classes (if generated at runtime)
+    { pattern: /^grid-cols-/ },
+    { pattern: /^col-span-/ },
+    // Dynamic spacing (if generated at runtime)
+    { pattern: /^(p|m|gap)-/ },
   ],
   theme: {
     extend: {
       colors: {
-        // Couleurs par défaut (conservées)
-        surface: "#faf8ff",
-        "surface-container-lowest": "#ffffff",
-        "surface-container-low": "#f3f3fd",
-        "surface-container": "#ededf8",
-        "surface-container-high": "#e7e7f2",
-        "surface-container-highest": "#e1e2ec",
-        "surface-variant": "#e1e2ec",
-        "on-surface": "#191b23",
-        "on-surface-variant": "#434654",
-        primary: "#003d9b",
-        "primary-container": "#0052cc",
-        "on-primary": "#ffffff",
-        "on-primary-container": "#c4d2ff",
-        secondary: "#4f5f7b",
-        "secondary-container": "#cdddff",
-        "on-secondary-container": "#51617e",
-        error: "#ba1a1a",
+        // Core Monster Hunter Wilds Design System
+        // Reduced palette: Removed unused light blues, kept only essential colors
+        surface: "#151310",
+        "surface-dim": "#151310",
+        "surface-bright": "#3b3935",
+        "surface-container-low": "#1d1b18",
+        "surface-container": "#211f1c",
+        "surface-container-high": "#2c2a26",
+        "surface-container-highest": "#373431",
+        
+        // Text colors
+        "on-surface": "#e3d5b8",
+        "on-surface-variant": "#d4c4b3",
+        
+        // Primary accent (gold/copper)
+        primary: "#c28e46",
+        "primary-fixed": "#f6bc6f",
+        "primary-fixed-dim": "#f6bc6f",
+        "on-primary": "#151310",
+        
+        // Secondary
+        secondary: "#4d4638",
+        "secondary-fixed": "#ede1ce",
+        "secondary-fixed-dim": "#d0c5b3",
+        "on-secondary": "#363023",
+        
+        // Tertiary
+        tertiary: "#cec5bb",
+        "tertiary-fixed": "#eae1d7",
+        "tertiary-fixed-dim": "#cec5bb",
+        "on-tertiary": "#343029",
+        
+        // Error
+        error: "#93000a",
         "error-container": "#ffdad6",
         "on-error": "#ffffff",
-        "on-error-container": "#8c0000",
-        outline: "#737685",
-        "outline-variant": "#c3c6d6",
-        // Couleurs Monster Hunter Wilds
-        "on-tertiary": "#343029",
-        "tertiary-fixed-dim": "#cec5bb",
-        "primary-fixed": "#ffddb5",
-        "secondary-fixed": "#ede1ce",
-        background: "#151310",
-        "tertiary-container": "#9f978e",
-        "surface-tint": "#f6bc6f",
-        "on-primary-fixed": "#2a1800",
-        "inverse-on-surface": "#33302d",
-        "on-tertiary-fixed-variant": "#4b463e",
-        "on-tertiary-container": "#343029",
-        "on-secondary": "#363023",
-        "on-secondary-fixed-variant": "#4d4638",
-        "on-secondary-fixed": "#201b0f",
-        "on-primary-fixed-variant": "#643f00",
-        "primary-fixed-dim": "#f6bc6f",
-        "inverse-surface": "#e8e1dc",
-        "tertiary-fixed": "#eae1d7",
-        "on-tertiary-fixed": "#1f1b15",
-        "on-surface-variant": "#d4c4b3",
-        "on-primary-container": "#452a00",
-        "surface-container-low": "#1d1b18",
-        "surface-container-highest": "#373431",
-        "surface-container": "#211f1c",
-        "tertiary": "#cec5bb",
-        "on-background": "#e8e1dc",
-        "inverse-primary": "#815511",
-        "surface-bright": "#3b3935",
-        "surface-dim": "#151310",
-        "secondary-fixed-dim": "#d0c5b3",
+        
+        // Outline
+        outline: "#504538",
         "outline-variant": "#504538",
-        "surface-container-high": "#2c2a26",
+        
+        // Inverse
+        "inverse-surface": "#e8e1dc",
+        "inverse-primary": "#815511",
       },
       fontFamily: {
         headline: ["Manrope", "sans-serif"],
         body: ["Inter", "sans-serif"],
       },
+      // Limit spacing scale to reduce CSS output
+      spacing: {
+        // Keep essential values only
+        "0": "0px",
+        "1": "4px",
+        "2": "8px",
+        "3": "12px",
+        "4": "16px",
+        "5": "20px",
+        "6": "24px",
+        "8": "32px",
+        "10": "40px",
+        "12": "48px",
+        "16": "64px",
+        "20": "80px",
+        "24": "96px",
+        "32": "128px",
+      },
+      // Limit font sizes
+      fontSize: {
+        "xs": "10px",
+        "sm": "12px",
+        "base": "14px",
+        "lg": "16px",
+        "xl": "18px",
+        "2xl": "20px",
+        "3xl": "24px",
+        "4xl": "32px",
+        "5xl": "40px",
+      },
     },
   },
   plugins: [],
 };
+
 
 
 

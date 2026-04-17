@@ -1,41 +1,66 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { Plus, Star } from "lucide-react";
+
+const PRIORITY_LABELS = {
+  1: "Basse",
+  2: "Moyenne",
+  3: "Haute",
+};
+const PRIORITY_TEXTS = {
+  1: "basse",
+  2: "moyenne",
+  3: "haute",
+};
 
 const AddTaskForm = ({ onAddTask }) => {
   const [taskTitle, setTaskTitle] = useState("");
-  const [taskPriority, setTaskPriority] = useState("moyenne");
+  const [taskPriority, setTaskPriority] = useState(2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    console.log("[AddTaskForm.handleSubmit] Soumis avec title:", taskTitle, "priority:", taskPriority);
-    setError("");
-    const normalizedTitle = taskTitle.trim();
-    if (!normalizedTitle) {
-      setError("Le titre est obligatoire.");
-      console.warn("[AddTaskForm.handleSubmit] Titre vide");
-      return;
-    }
-    setLoading(true);
-    try {
-      console.log("[AddTaskForm.handleSubmit] Appel onAddTask");
-      await onAddTask?.({
-        title: normalizedTitle,
-        priority: taskPriority,
-      });
-      console.log("[AddTaskForm.handleSubmit] Succès, rénitialisation du formulaire");
-      setTaskTitle("");
-      setTaskPriority("moyenne");
-    } catch (err) {
-      console.error("[AddTaskForm.handleSubmit] Erreur:", err);
-      setError(err.message || "Erreur lors de l'ajout de la tâche.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const priorityLevels = useMemo(() => [1, 2, 3], []);
+
+  const currentPriorityLabel = useMemo(() => PRIORITY_LABELS[taskPriority], [taskPriority]);
+
+  const handleTitleChange = useCallback((event) => {
+    setTaskTitle(event.target.value);
+  }, []);
+
+  const handlePriorityClick = useCallback(
+    (level) => {
+      setTaskPriority(level);
+    },
+    []
+  );
+
+  const handleSubmit = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setError("");
+      const normalizedTitle = taskTitle.trim();
+      if (!normalizedTitle) {
+        setError("Le titre est obligatoire.");
+        return;
+      }
+      setLoading(true);
+      try {
+        const priorityText = PRIORITY_TEXTS[taskPriority];
+        await onAddTask?.({
+          title: normalizedTitle,
+          priority: priorityText,
+        });
+        setTaskTitle("");
+        setTaskPriority(2);
+      } catch (err) {
+        setError(err.message || "Erreur lors de l'ajout de la tâche.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [taskTitle, taskPriority, onAddTask]
+  );
 
   return (
     <form
@@ -45,20 +70,19 @@ const AddTaskForm = ({ onAddTask }) => {
       autoComplete="off"
     >
       {error && (
-        <div className="text-error text-sm font-medium" role="alert">{error}</div>
+        <div className="text-error text-sm font-medium" role="alert">
+          {error}
+        </div>
       )}
       <div className="flex-1">
-        <label
-          htmlFor="task-title"
-          className="form-label"
-        >
+        <label htmlFor="task-title" className="form-label">
           Titre de la tâche
         </label>
         <input
           id="task-title"
           type="text"
           value={taskTitle}
-          onChange={(event) => setTaskTitle(event.target.value)}
+          onChange={handleTitleChange}
           placeholder="Nouvelle tâche..."
           className="input-text"
           required
@@ -68,25 +92,36 @@ const AddTaskForm = ({ onAddTask }) => {
         />
       </div>
 
-      <div className="relative sm:w-40 w-full">
-        <label
-          htmlFor="task-priority"
-          className="form-label"
-        >
-          Priorité
-        </label>
-        <select
-          id="task-priority"
-          value={taskPriority}
-          onChange={(event) => setTaskPriority(event.target.value)}
-          className="select-base"
+      <div className="flex flex-col items-start gap-2 py-2">
+        <label className="form-label">Priorité</label>
+        <div
+          className="flex items-center gap-1"
+          role="radiogroup"
           aria-label="Sélectionner la priorité"
-          disabled={loading}
         >
-          <option value="haute">haute</option>
-          <option value="moyenne">moyenne</option>
-          <option value="basse">basse</option>
-        </select>
+          {priorityLevels.map((level) => (
+            <button
+              key={level}
+              type="button"
+              className={`p-1 rounded focus:outline-none ${taskPriority >= level ? "text-yellow-400" : "text-gray-300"}`}
+              aria-label={
+                level === 3
+                  ? "Haute priorité"
+                  : level === 2
+                  ? "Priorité moyenne"
+                  : "Basse priorité"
+              }
+              aria-pressed={taskPriority === level}
+              onClick={() => handlePriorityClick(level)}
+              disabled={loading}
+            >
+              <Star fill={taskPriority >= level ? "#facc15" : "none"} strokeWidth={2} size={24} />
+            </button>
+          ))}
+          <span className="ml-2 text-sm font-medium text-gray-500">
+            {currentPriorityLabel}
+          </span>
+        </div>
       </div>
 
       <button

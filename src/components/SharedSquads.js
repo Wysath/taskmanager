@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
+import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRavenMessenger } from "@/hooks/useRavenMessenger";
 import {
@@ -8,12 +10,13 @@ import {
   createSharedList,
   subscribeToSharedTasks,
 } from "@/services/sharedListService";
-import { collection, query, where, getDoc, doc, orderBy, getDocs } from "firebase/firestore";
+import { collection, query as fbQuery, where, getDoc, doc, orderBy, getDocs } from "@firebase/firestore";
 import { db } from "@/lib/firebase";
-import CreateListForm from "@/components/CreateListForm";
 import SharedListCard from "@/components/SharedListCard";
-import SharedListView from "@/components/SharedListView";
 import { Plus, Users, Sword } from "lucide-react";
+
+const CreateListForm = dynamic(() => import("@/components/CreateListForm"), { ssr: false });
+const SharedListView = dynamic(() => import("@/components/SharedListView"), { ssr: false });
 
 /**
  * Composant réutilisable pour gérer les Escouades (listes partagées)
@@ -46,28 +49,45 @@ export default function SharedSquads({ className = "", enableNotifications = tru
     setError("");
     const unsubscribe = subscribeToSharedLists(user.email, (data, err) => {
       if (err) {
-        setError(err);
+        setError("Impossible de charger vos escouades. Vérifiez votre connexion.");
         setLists([]);
       } else {
         setLists(data);
       }
       setListsLoading(false);
     });
-    return () => unsubscribe();
+    return unsubscribe;
   }, [user]);
 
-  // Notifications "Corbeau Messager" pour les nouvelles tâches
-  useRavenMessenger({
-    collectionQuery: tasksQuery,
-    currentUserEmail: user?.email,
-    enabled: enableNotifications && !!selectedList && !!user,
-  });
+  // Création d'une nouvelle liste (mémoïsée)
+  const handleCreateList = useCallback(
+    async (name) => {
+      if (!user) {
+        toast.error("Vous devez être connecté pour créer une escouade.");
+        return;
+      }
+      try {
+        await createSharedList(user.uid, name, user.email);
+        toast.success(`Escouade "${name}" créée avec succès`);
+      } catch (err) {
+        const message = err?.message?.includes("permission")
+          ? "Vous n'avez pas la permission de créer une escouade."
+          : "Impossible de créer l'escouade. Vérifiez votre connexion.";
+        toast.error(message);
+      }
+    },
+    [user]
+  );
 
-  // Création d'une nouvelle liste
-  const handleCreateList = useCallback(async (name) => {
-    if (!user) throw new Error("Vous devez être connecté.");
-    await createSharedList(user.uid, name, user.email);
-  }, [user]);
+  // Mémoïse le callback d'ouverture d'une escouade
+  const handleOpenList = useCallback((list) => setSelectedList(list), []);
+  // Mémoïse la fermeture de l'escouade
+  const handleCloseList = useCallback(() => {
+    setSelectedList(null);
+    setSharedTasks([]);
+    setTasksError("");
+    setTasksLoading(false);
+  }, []);
 
   // Abonnement temps réel aux tâches partagées
   useEffect(() => {
@@ -79,13 +99,14 @@ export default function SharedSquads({ className = "", enableNotifications = tru
       setTasksQuery(null);
       return;
     }
+
     setTasksLoading(true);
     setTasksError("");
-    
+
     // Abonnement temps réel aux tâches
     const unsubscribe = subscribeToSharedTasks(selectedList.id, (tasks, err) => {
       if (err) {
-        setTasksError(err);
+        setTasksError("Impossible de charger les tâches. Vérifiez votre accès.");
         setSharedTasks([]);
       } else {
         setSharedTasks(tasks);
@@ -94,26 +115,26 @@ export default function SharedSquads({ className = "", enableNotifications = tru
     });
 
     // Crée la requête pour le hook useRavenMessenger
-    const q = query(
+    const q = fbQuery(
       collection(db, `sharedLists/${selectedList.id}/tasks`),
       orderBy("createdAt", "desc")
     );
     setTasksQuery(q);
 
-    // Récupération des infos membres
+    // Récupération des infos membres (mémorisée pour éviter les conflits asynchrones)
     async function fetchMembers() {
       if (!selectedList.members || selectedList.members.length === 0) {
         setMembers([]);
         return;
       }
-      // Firestore n'autorise pas plus de 10 dans 'in', donc batch
       let users = [];
       for (let i = 0; i < selectedList.members.length; i += 10) {
         const batch = selectedList.members.slice(i, i + 10);
-        const q = query(collection(db, "users"), where("uid", "in", batch));
-        const snap = await getDocs(q);
+        const userSnap = await getDocs(
+          fbQuery(collection(db, "users"), where("uid", "in", batch))
+        );
         users = users.concat(
-          snap.docs.map((doc) => ({
+          userSnap.docs.map((doc) => ({
             id: doc.id,
             uid: doc.data().uid || doc.id,
             email: doc.data().email,
@@ -121,7 +142,9 @@ export default function SharedSquads({ className = "", enableNotifications = tru
         );
       }
       // Ajoute les membres non trouvés : essaie de chercher par ID de document
-      const missing = selectedList.members.filter((uid) => !users.find((u) => u.uid === uid));
+      const missing = selectedList.members.filter(
+        (uid) => !users.find((u) => u.uid === uid)
+      );
       for (const uid of missing) {
         try {
           const docRef = doc(db, "users", uid);
@@ -143,16 +166,18 @@ export default function SharedSquads({ className = "", enableNotifications = tru
       setMembers(users);
     }
     fetchMembers();
-    return () => unsubscribe();
+
+    return unsubscribe;
   }, [selectedList]);
 
-  const handleOpenList = (list) => setSelectedList(list);
-  const handleCloseList = () => {
-    setSelectedList(null);
-    setSharedTasks([]);
-    setTasksError("");
-    setTasksLoading(false);
-  };
+  // Trie mémoïsé des listes par date de création descendante (exemple optimisation si besoin)
+  const sortedLists = useMemo(() => {
+    if (!lists || lists.length === 0) return [];
+    // Suppose présence d'un champ createdAt (sinon on ne trie pas)
+    return [...lists].sort((a, b) =>
+      (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)
+    );
+  }, [lists]);
 
   // États de chargement
   if (authLoading || listsLoading) {
@@ -184,21 +209,36 @@ export default function SharedSquads({ className = "", enableNotifications = tru
         currentUserId={user.uid}
         currentUserEmail={user.email}
         members={members}
-        onAddMember={(email) => {
-          // La logique d'ajout de membre peut être passée comme prop si nécessaire
-        }}
-        onRemoveMember={(memberEmail) => {
-          // La logique de suppression peut être passée comme prop si nécessaire
-        }}
-        onAddTask={() => {
-          // Gestion de l'ajout de tâche
-        }}
-        onUpdateTask={() => {
-          // Mise à jour de tâche
-        }}
-        onDeleteTask={() => {
-          // Suppression de tâche
-        }}
+        onAddMember={useCallback(
+          (email) => {
+            // La logique d'ajout de membre peut être passée ici
+          },
+          []
+        )}
+        onRemoveMember={useCallback(
+          (memberEmail) => {
+            // La logique de suppression peut être passée ici
+          },
+          []
+        )}
+        onAddTask={useCallback(
+          () => {
+            // Gestion de l'ajout de tâche
+          },
+          []
+        )}
+        onUpdateTask={useCallback(
+          () => {
+            // Mise à jour de tâche
+          },
+          []
+        )}
+        onDeleteTask={useCallback(
+          () => {
+            // Suppression de tâche
+          },
+          []
+        )}
         onBack={handleCloseList}
       />
     );
@@ -241,10 +281,10 @@ export default function SharedSquads({ className = "", enableNotifications = tru
         <div className="flex flex-col gap-6">
           <h2 className="font-headline text-2xl text-[#c28e46] flex items-center gap-2 uppercase tracking-widest">
             <Users size={24} />
-            Vos Escouades ({lists.length})
+            Vos Escouades ({sortedLists.length})
           </h2>
 
-          {lists.length === 0 ? (
+          {sortedLists.length === 0 ? (
             <div className="text-center py-16">
               <div className="flex justify-center mb-4">
                 <Sword size={48} className="text-[#c28e46]" />
@@ -258,11 +298,11 @@ export default function SharedSquads({ className = "", enableNotifications = tru
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {lists.map((list) => (
+              {sortedLists.map((list) => (
                 <SharedListCard
                   key={list.id}
                   list={list}
-                  onClick={() => handleOpenList(list)}
+                  onClick={useCallback(() => handleOpenList(list), [handleOpenList, list])}
                 />
               ))}
             </div>

@@ -1,19 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// Imports: Regroupés par bloc logique
+// 1. React & hooks
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
+// 2. Context & Router
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { LogOut, ArrowLeft, User, CheckCircle2, Crown, Shield, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
-import { subscribeToSharedLists, updateMemberRole, updateMyRole } from "@/services/sharedListService";
-import { deleteUser } from "firebase/auth";
-import { db, auth } from "@/lib/firebase";
-import { collection, getDocs, writeBatch, doc } from "firebase/firestore";
-import toast from "react-hot-toast";
+import ProtectedRoute from "@/components/ProtectedRoute";
+// Firebase imports moved to lazy-load in handlers to prevent blocking mobile render
+// 3. Services internes (also lazy-loaded in handlers)
+// Services will be imported on demand in useCallback handlers
+// 5. Composants
 import Modal from "@/components/Modal";
+// 6. Outils externes UI
+import toast from "react-hot-toast";
+// 7. Icônes
+import {
+  LogOut,
+  ArrowLeft,
+  User,
+  CheckCircle2,
+  Crown,
+  Shield,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+} from "lucide-react";
 
 const ProfilePage = () => {
   const { user, loading, logOut } = useAuth();
   const router = useRouter();
+
   const [squads, setSquads] = useState([]);
   const [loadingSquads, setLoadingSquads] = useState(true);
   const [expandedSquads, setExpandedSquads] = useState({});
@@ -24,74 +42,100 @@ const ProfilePage = () => {
   const [allSquads, setAllSquads] = useState([]);
   const [expandedMyRoles, setExpandedMyRoles] = useState({});
 
-  // Charger les escouades où l'utilisateur est admin ET toutes les escouades où il a un rôle
+  // Subscribe aux shared lists (écouteur temps réel : clean-up garanti)
+  // Lazy-load the subscription service to prevent blocking initial render
   useEffect(() => {
     if (!user?.email) {
       setLoadingSquads(false);
       return;
     }
 
-    const unsubscribe = subscribeToSharedLists(user.email, (lists) => {
-      // Filter escouades where user is admin
-      const adminSquads = lists.filter(list => {
-        const userMember = list.members?.find(m => m.email?.toLowerCase() === user.email?.toLowerCase());
-        return userMember?.role === "admin";
-      });
-      setSquads(adminSquads);
-      
-      // Store all squads where user is member (for "Mes Rôles" section)
-      setAllSquads(lists);
-      setLoadingSquads(false);
-    });
+    let unsubscribe;
+    
+    (async () => {
+      try {
+        const { subscribeToSharedLists } = await import("@/services/sharedListService");
+        
+        unsubscribe = subscribeToSharedLists(user.email, (lists) => {
+          // Calcul immédiat pour redux et autres parties
+          const adminSquads = lists.filter((list) => {
+            const userMember = list.members?.find(
+              (m) => m.email?.toLowerCase() === user.email?.toLowerCase()
+            );
+            return userMember?.role === "admin";
+          });
+          setSquads(adminSquads);
+          setAllSquads(lists);
+          setLoadingSquads(false);
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[subscribeToSharedLists]", err);
+        setLoadingSquads(false);
+      }
+    })();
 
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
   }, [user?.email]);
 
-  const toggleSquadExpanded = (squadId) => {
-    setExpandedSquads(prev => ({
+  // useCallback pour fonctions passées en props ou à des composants enfants
+  const toggleSquadExpanded = useCallback((squadId) => {
+    setExpandedSquads((prev) => ({
       ...prev,
-      [squadId]: !prev[squadId]
+      [squadId]: !prev[squadId],
     }));
-  };
+  }, []);
 
-  const toggleMyRolesExpanded = (squadId) => {
-    setExpandedMyRoles(prev => ({
+  const toggleMyRolesExpanded = useCallback((squadId) => {
+    setExpandedMyRoles((prev) => ({
       ...prev,
-      [squadId]: !prev[squadId]
+      [squadId]: !prev[squadId],
     }));
-  };
+  }, []);
 
-  const handleRoleChange = async (squadId, memberEmail, newRole) => {
-    const changeKey = `${squadId}-${memberEmail}`;
-    setUpdatingRoles(prev => ({ ...prev, [changeKey]: true }));
-    
-    try {
-      await updateMemberRole(squadId, memberEmail, newRole, user.uid);
-      toast.success(`Rôle de ${memberEmail} mis à jour`);
-    } catch (err) {
-      toast.error(err.message || "Erreur lors de la mise à jour du rôle");
-      console.error("[handleRoleChange]", err);
-    } finally {
-      setUpdatingRoles(prev => ({ ...prev, [changeKey]: false }));
-    }
-  };
+  const handleRoleChange = useCallback(
+    async (squadId, memberEmail, newRole) => {
+      const changeKey = `${squadId}-${memberEmail}`;
+      setUpdatingRoles((prev) => ({ ...prev, [changeKey]: true }));
 
-  const handleUpdateMyRole = async (squadId, newRole) => {
-    const changeKey = `myRole-${squadId}`;
-    setUpdatingRoles(prev => ({ ...prev, [changeKey]: true }));
-    
-    try {
-      await updateMyRole(squadId, user.email, newRole);
-      toast.success("Ton rôle a été mis à jour");
-    } catch (err) {
-      toast.error(err.message || "Erreur lors de la mise à jour du rôle");
-      console.error("[handleUpdateMyRole]", err);
-    } finally {
-      setUpdatingRoles(prev => ({ ...prev, [changeKey]: false }));
-    }
-  };
+      try {
+        const { updateMemberRole } = await import("@/services/sharedListService");
+        await updateMemberRole(squadId, memberEmail, newRole, user.uid);
+        toast.success(`Rôle de ${memberEmail} mis à jour`);
+      } catch (err) {
+        toast.error(err.message || "Erreur lors de la mise à jour du rôle");
+        // eslint-disable-next-line no-console
+        console.error("[handleRoleChange]", err);
+      } finally {
+        setUpdatingRoles((prev) => ({ ...prev, [changeKey]: false }));
+      }
+    },
+    [user?.uid]
+  );
 
-  const handleDeleteAccount = async () => {
+  const handleUpdateMyRole = useCallback(
+    async (squadId, newRole) => {
+      const changeKey = `myRole-${squadId}`;
+      setUpdatingRoles((prev) => ({ ...prev, [changeKey]: true }));
+
+      try {
+        const { updateMyRole } = await import("@/services/sharedListService");
+        await updateMyRole(squadId, user.email, newRole);
+        toast.success("Ton rôle a été mis à jour");
+      } catch (err) {
+        toast.error(err.message || "Erreur lors de la mise à jour du rôle");
+        // eslint-disable-next-line no-console
+        console.error("[handleUpdateMyRole]", err);
+      } finally {
+        setUpdatingRoles((prev) => ({ ...prev, [changeKey]: false }));
+      }
+    },
+    [user?.email]
+  );
+
+  const handleDeleteAccount = useCallback(async () => {
     if (deleteConfirmInput !== "CONFIRMER") {
       toast.error("Vous devez taper 'CONFIRMER' pour continuer");
       return;
@@ -99,10 +143,17 @@ const ProfilePage = () => {
 
     setIsDeleting(true);
     try {
-      // Étape 1: Supprimer toutes les tâches de l'utilisateur avec batch
+      // Lazy-load Firebase modules to prevent blocking main thread
+      const { collection, getDocs, writeBatch, doc, query, where, updateDoc, arrayRemove } = await import("@firebase/firestore");
+      const { deleteUser } = await import("@firebase/auth");
+      const { db, auth } = await import("@/lib/firebase");
+
+      const userEmail = user.email?.toLowerCase();
+
+      // Étape 1: Supprimer toutes les tâches personnelles de l'utilisateur
       const tasksRef = collection(db, `users/${user.uid}/tasks`);
       const tasksSnapshot = await getDocs(tasksRef);
-      
+
       if (tasksSnapshot.docs.length > 0) {
         const batch = writeBatch(db);
         tasksSnapshot.docs.forEach((docSnap) => {
@@ -111,28 +162,61 @@ const ProfilePage = () => {
         await batch.commit();
       }
 
-      // Étape 2: Supprimer le document utilisateur s'il existe
-      const userDocRef = doc(db, "users", user.uid);
-      const batch = writeBatch(db);
-      batch.delete(userDocRef);
-      await batch.commit();
+      // Étape 2: Gérer les escouades (listes partagées)
+      const sharedListsRef = collection(db, "sharedLists");
+      const allListsSnapshot = await getDocs(sharedListsRef);
+      
+      const batch2 = writeBatch(db);
+      
+      for (const listDoc of allListsSnapshot.docs) {
+        const listData = listDoc.data();
+        const listId = listDoc.id;
+        
+        // Si l'utilisateur est le propriétaire, supprimer toute la liste et ses tâches
+        if (listData.ownerId === user.uid) {
+          // Supprimer toutes les tâches de cette liste
+          const tasksInListRef = collection(db, `sharedLists/${listId}/tasks`);
+          const tasksInListSnapshot = await getDocs(tasksInListRef);
+          
+          tasksInListSnapshot.docs.forEach((taskDoc) => {
+            batch2.delete(taskDoc.ref);
+          });
+          
+          // Supprimer la liste elle-même
+          batch2.delete(listDoc.ref);
+        } else if (listData.members && Array.isArray(listData.members)) {
+          // Sinon, retirer l'utilisateur de la liste des membres
+          const updatedMembers = listData.members.filter(
+            (m) => m.email?.toLowerCase() !== userEmail
+          );
+          batch2.update(listDoc.ref, { members: updatedMembers });
+        }
+      }
+      
+      await batch2.commit();
 
-      // Étape 3: Supprimer le compte Firebase Auth
+      // Étape 3: Supprimer le document utilisateur s'il existe
+      const userDocRef = doc(db, "users", user.uid);
+      const batch3 = writeBatch(db);
+      batch3.delete(userDocRef);
+      await batch3.commit();
+
+      // Étape 4: Supprimer le compte Firebase Auth
       const currentUser = auth.currentUser;
       if (currentUser) {
         await deleteUser(currentUser);
       }
 
-      // Étape 4: Redirection vers /login
-      toast.success("Compte supprimé avec succès");
+      // Étape 5: Redirection vers /login
+      toast.success("Compte et toutes les données supprimés avec succès");
       setShowDeleteModal(false);
       setTimeout(() => {
         router.push("/login");
       }, 1500);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("[handleDeleteAccount]", err);
-      
-      // Gestion des erreurs spécifiques
+
       if (err.code === "auth/requires-recent-login") {
         toast.error("Vous devez vous reconnecter avant de supprimer votre compte");
         setShowDeleteModal(false);
@@ -145,45 +229,49 @@ const ProfilePage = () => {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [deleteConfirmInput, router, user?.uid, user?.email]);
 
+  // Sécurité navigation : redirection si déconnecté
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [loading, user, router]);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await logOut();
       router.push("/login");
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("Erreur logout:", err);
     }
-  };
+  }, [logOut, router]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#151310]">
-        <div className="text-center">
-          <span className="text-2xl font-headline text-[#c28e46]">Chargement...</span>
-        </div>
-      </div>
-    );
-  }
+  // useMemo pour listes filtrées
+  // 1. Mes Escouades (où je suis admin)
+  const memoizedSquads = useMemo(() => squads, [squads]);
 
-  if (!user) {
-    return null;
-  }
+  // 2. Mes rôles (où je ne suis pas admin)
+  const myRolesSquads = useMemo(() => {
+    return allSquads.filter((list) => {
+      const userMember = list.members?.find(
+        (m) => m.email?.toLowerCase() === user?.email?.toLowerCase()
+      );
+      return userMember && userMember.role !== "admin";
+    });
+  }, [allSquads, user?.email]);
 
-  const displayName = user.displayName || "Utilisateur";
-  const email = user.email || "";
-  const avatarUrl = user.photoURL || null;
+  const displayName = user?.displayName || "Utilisateur";
+  const email = user?.email || "";
+  const avatarUrl = user?.photoURL || null;
 
   return (
-    <div className="min-h-screen bg-[#151310] text-[#e3d5b8]">
-      {/* Main content */}
-      <div className="ml-72 min-h-screen p-8">
+    <div suppressHydrationWarning className="min-h-screen bg-[#151310] text-[#e3d5b8]">
+      {!user ? null : (
+      <div suppressHydrationWarning>
+        {/* Main content */}
+        <div className="md:ml-72 min-h-screen p-8">
         {/* Header with back button */}
         <div className="flex items-center justify-between mb-12">
           <button
@@ -278,11 +366,11 @@ const ProfilePage = () => {
 
             {loadingSquads ? (
               <p className="text-[#8a8171] font-body italic">Chargement des escouades...</p>
-            ) : squads.length === 0 ? (
+            ) : memoizedSquads.length === 0 ? (
               <p className="text-[#8a8171] font-body italic">Vous n'êtes chef d'aucune escouade.</p>
             ) : (
               <div className="space-y-4">
-                {squads.map(squad => (
+                {memoizedSquads.map((squad) => (
                   <div key={squad.id} className="bg-[#2c2a26] border-2 border-[#504538] overflow-hidden">
                     {/* Squad header */}
                     <button
@@ -294,7 +382,7 @@ const ProfilePage = () => {
                         <div>
                           <h3 className="font-headline text-[#e3d5b8] uppercase tracking-widest">{squad.name}</h3>
                           <p className="text-[#8a8171] font-label text-xs">
-                            {squad.members?.length || 0} membre{(squad.members?.length || 0) > 1 ? 's' : ''}
+                            {squad.members?.length || 0} membre{(squad.members?.length || 0) > 1 ? "s" : ""}
                           </p>
                         </div>
                       </div>
@@ -308,45 +396,53 @@ const ProfilePage = () => {
                     {/* Squad members */}
                     {expandedSquads[squad.id] && (
                       <div className="border-t border-[#504538] p-4 space-y-3">
-                        {squad.members?.map(member => (
-                          <div key={member.email} className="flex items-center justify-between gap-3 p-3 bg-[#3a3835] border border-[#504538]">
-                            <div className="flex items-center gap-3 flex-1">
-                              <div className="w-8 h-8 bg-[#c28e46] flex items-center justify-center text-[#151310] font-bold rounded text-xs">
-                                {member.email?.[0]?.toUpperCase()}
+                        {squad.members?.map((member) => {
+                          const isCurrentUser = member.email?.toLowerCase() === user.email?.toLowerCase();
+                          return (
+                            <div
+                              key={member.email}
+                              className="flex items-center justify-between gap-3 p-3 bg-[#3a3835] border border-[#504538]"
+                            >
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="w-8 h-8 bg-[#c28e46] flex items-center justify-center text-[#151310] font-bold rounded text-xs">
+                                  {member.email?.[0]?.toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[#e3d5b8] font-body text-sm truncate">{member.email}</p>
+                                  <p className="text-[#8a8171] font-label text-xs uppercase tracking-wider">
+                                    {member.role === "admin" && "Chef d'Escouade"}
+                                    {member.role === "editor" && "Éditeur"}
+                                    {member.role === "viewer" && "Lecteur"}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[#e3d5b8] font-body text-sm truncate">{member.email}</p>
-                                <p className="text-[#8a8171] font-label text-xs uppercase tracking-wider">
-                                  {member.role === "admin" && "Chef d'Escouade"}
-                                  {member.role === "editor" && "Éditeur"}
-                                  {member.role === "viewer" && "Lecteur"}
-                                </p>
-                              </div>
+
+                              {/* Role selector - only for non-admin members */}
+                              {!isCurrentUser && (
+                                <select
+                                  value={member.role || "editor"}
+                                  onChange={(e) =>
+                                    handleRoleChange(squad.id, member.email, e.target.value)
+                                  }
+                                  disabled={updatingRoles[`${squad.id}-${member.email}`]}
+                                  className="bg-[#2c2a26] text-[#e3d5b8] border border-[#504538] px-3 py-2 font-label text-xs uppercase rounded cursor-pointer hover:border-[#c28e46] transition-colors disabled:opacity-50"
+                                  aria-label={`Rôle de ${member.email}`}
+                                >
+                                  <option value="admin">Chef</option>
+                                  <option value="editor">Éditeur</option>
+                                  <option value="viewer">Lecteur</option>
+                                </select>
+                              )}
+
+                              {/* Badge for current user */}
+                              {isCurrentUser && (
+                                <div className="px-3 py-2 bg-[#c28e46] text-[#151310] font-label text-xs uppercase rounded font-bold">
+                                  Vous
+                                </div>
+                              )}
                             </div>
-
-                            {/* Role selector - only for non-admin members */}
-                            {member.email?.toLowerCase() !== user.email?.toLowerCase() && (
-                              <select
-                                value={member.role || "editor"}
-                                onChange={(e) => handleRoleChange(squad.id, member.email, e.target.value)}
-                                disabled={updatingRoles[`${squad.id}-${member.email}`]}
-                                className="bg-[#2c2a26] text-[#e3d5b8] border border-[#504538] px-3 py-2 font-label text-xs uppercase rounded cursor-pointer hover:border-[#c28e46] transition-colors disabled:opacity-50"
-                                aria-label={`Rôle de ${member.email}`}
-                              >
-                                <option value="admin">Chef</option>
-                                <option value="editor">Éditeur</option>
-                                <option value="viewer">Lecteur</option>
-                              </select>
-                            )}
-
-                            {/* Badge for current user */}
-                            {member.email?.toLowerCase() === user.email?.toLowerCase() && (
-                              <div className="px-3 py-2 bg-[#c28e46] text-[#151310] font-label text-xs uppercase rounded font-bold">
-                                Vous
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -364,20 +460,16 @@ const ProfilePage = () => {
 
             {loadingSquads ? (
               <p className="text-[#8a8171] font-body italic">Chargement...</p>
-            ) : allSquads.filter(list => {
-              const userMember = list.members?.find(m => m.email?.toLowerCase() === user.email?.toLowerCase());
-              return userMember && userMember.role !== "admin";
-            }).length === 0 ? (
+            ) : myRolesSquads.length === 0 ? (
               <p className="text-[#8a8171] font-body italic">Vous n'êtes membre d'aucune escouade (sauf en tant que chef).</p>
             ) : (
               <div className="space-y-4">
-                {allSquads.filter(list => {
-                  const userMember = list.members?.find(m => m.email?.toLowerCase() === user.email?.toLowerCase());
-                  return userMember && userMember.role !== "admin";
-                }).map(squad => {
-                  const userMember = squad.members?.find(m => m.email?.toLowerCase() === user.email?.toLowerCase());
+                {myRolesSquads.map((squad) => {
+                  const userMember = squad.members?.find(
+                    (m) => m.email?.toLowerCase() === user.email?.toLowerCase()
+                  );
                   const isOwner = squad.ownerId === user?.uid;
-                  
+
                   return (
                     <div key={squad.id} className="bg-[#2c2a26] border-2 border-[#504538] overflow-hidden">
                       {/* Squad header */}
@@ -390,7 +482,7 @@ const ProfilePage = () => {
                           <div>
                             <h3 className="font-headline text-[#e3d5b8] uppercase tracking-widest">{squad.name}</h3>
                             <p className="text-[#8a8171] font-label text-xs">
-                              Chef: {squad.members?.find(m => m.role === "admin")?.email || "Inconnu"}
+                              Chef: {squad.members?.find((m) => m.role === "admin")?.email || "Inconnu"}
                             </p>
                           </div>
                         </div>
@@ -417,17 +509,11 @@ const ProfilePage = () => {
                                 </p>
                               </div>
                             </div>
-                            {/* Dropdown pour changer ton propre rôle */}
-                            <select
-                              value={userMember?.role || "viewer"}
-                              onChange={(e) => handleUpdateMyRole(squad.id, e.target.value)}
-                              disabled={updatingRoles[`myRole-${squad.id}`]}
-                              className="bg-[#2c2a26] text-[#e3d5b8] border border-[#504538] px-3 py-2 font-label text-xs uppercase rounded cursor-pointer hover:border-[#c28e46] transition-colors disabled:opacity-50"
-                              aria-label="Changer ton rôle"
-                            >
-                              <option value="editor">Éditeur</option>
-                              <option value="viewer">Lecteur</option>
-                            </select>
+                            {/* Affichage du rôle (lecture seule) */}
+                            <div className="text-[#c28e46] font-label text-xs uppercase tracking-wider">
+                              {userMember?.role === "editor" && "Éditeur"}
+                              {userMember?.role === "viewer" && "Lecteur"}
+                            </div>
                           </div>
                           {isOwner && (
                             <p className="text-[#c28e46] font-label text-xs italic">Vous êtes le chef de cette escouade.</p>
@@ -477,32 +563,62 @@ const ProfilePage = () => {
           }}
         >
           <Modal.Title style={{ color: "var(--error)" }}>
-            Rendre son Insigne
+            ⚔️ Rendre son Insigne
           </Modal.Title>
           <Modal.Subtitle>
-            Vous êtes sur le point de supprimer votre compte définitivement. Cette action est irréversible.
+            Cette action est <span className="font-bold text-[#93000a]">définitive et irréversible</span>
           </Modal.Subtitle>
         </Modal.Header>
 
         <Modal.DangerZone>
-          <h3>⚠️ Attention</h3>
-          <p>Toutes vos tâches seront supprimées définitivement.</p>
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <AlertTriangle size={28} className="text-[#93000a] shrink-0 mt-1" />
+              <div>
+                <h3 className="font-headline text-lg text-[#e3d5b8] mb-2 uppercase tracking-widest">Conséquences permanentes</h3>
+                <ul className="space-y-2 text-[#d4af9f]">
+                  <li className="flex gap-2">
+                    <span className="text-[#93000a] font-bold">→</span>
+                    <span>Toutes vos <strong>tâches</strong> seront supprimées sans possibilité de récupération</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#93000a] font-bold">→</span>
+                    <span>Vous serez <strong>automatiquement retiré</strong> de toutes les escouades</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#93000a] font-bold">→</span>
+                    <span>Votre <strong>historique</strong> sera supprimé complètement</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#93000a] font-bold">→</span>
+                    <span>Les autres utilisateurs ne pourront plus vous <strong>inviter</strong></span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </Modal.DangerZone>
 
         <Modal.Body>
-          <div className="form-group">
-            <label className="form-label form-label-required">
-              Confirmez en tapant "CONFIRMER"
-            </label>
-            <input
-              type="text"
-              value={deleteConfirmInput}
-              onChange={(e) => setDeleteConfirmInput(e.target.value)}
-              placeholder="CONFIRMER"
-              className="input-base input-lg"
-              disabled={isDeleting}
-              aria-label="Confirmation de suppression"
-            />
+          <div className="space-y-4">
+            <div className="bg-[#2c2a26] border-l-4 border-[#93000a] p-4">
+              <p className="text-[#d4af9f] font-body text-sm">
+                Pour confirmer la suppression définitive de votre compte, tapez exactement:
+              </p>
+              <p className="text-[#c28e46] font-headline font-bold text-lg mt-1">CONFIRMER</p>
+            </div>
+            <div className="form-group">
+              <input
+                type="text"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                placeholder="Tapez CONFIRMER ici"
+                className="input-base input-lg font-mono tracking-widest text-center"
+                disabled={isDeleting}
+                aria-label="Confirmation de suppression"
+                autoComplete="off"
+              />
+            </div>
           </div>
         </Modal.Body>
 
@@ -513,21 +629,39 @@ const ProfilePage = () => {
               setDeleteConfirmInput("");
             }}
             disabled={isDeleting}
-            className="btn btn-secondary"
+            className="btn btn-secondary flex-1"
           >
             Annuler
           </button>
           <button
             onClick={handleDeleteAccount}
             disabled={isDeleting || deleteConfirmInput !== "CONFIRMER"}
-            className="btn btn-error"
+            className="btn btn-error flex-1 relative overflow-hidden group"
           >
-            {isDeleting ? "Suppression..." : "Supprimer définitivement"}
+            {isDeleting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block animate-spin">⚙️</span>
+                Suppression en cours...
+              </span>
+            ) : (
+              <>
+                <span className="relative z-10">💀 Supprimer définitivement</span>
+                <span className="absolute inset-0 bg-[#c21e1e] transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200 z-0" />
+              </>
+            )}
           </button>
         </Modal.Footer>
       </Modal>
+      </div>
+      )}
     </div>
   );
 };
 
-export default ProfilePage;
+export default function ProfilPage() {
+  return (
+    <ProtectedRoute>
+      <ProfilePage />
+    </ProtectedRoute>
+  );
+}

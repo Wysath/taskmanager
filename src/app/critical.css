@@ -1,0 +1,92 @@
+/* 
+  Critical CSS - Inline in <head> for fastest first paint
+  Only includes styles needed for above-the-fold content
+*/
+
+:root {
+  --primary: #c28e46;
+  --background: #151310;
+  --surface: #211f1c;
+  --on-surface: #e3d5b8;
+  --error: #ffb4ab;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--background);
+  color: var(--on-surface);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.5;
+}
+
+/* Skeleton loaders - for perceived performance */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Fast path for form rendering */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(80, 69, 56, 0.5);
+  background: var(--surface);
+  color: var(--on-surface);
+  border-radius: 0;
+}
+
+button {
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 200ms ease;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Specific form button styling */
+button[type="submit"],
+.btn-form {
+  padding: 0.75rem 1.5rem;
+  background: var(--primary);
+  color: var(--background);
+  border: none;
+}
+
+button[type="submit"]:hover,
+.btn-form:hover {
+  background: #d4a574;
+}
+
+/* Loading state */
+.loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Error state */
+.error {
+  color: var(--error);
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}

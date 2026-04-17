@@ -1,10 +1,17 @@
 // Tableau de bord statistiques pour les tâches
-import React from "react";
+import React, { useMemo } from "react";
 
 const Dashboard = ({ tasks = [] }) => {
-  const total = tasks.length;
-  const completed = tasks.filter((t) => t.completed).length;
-  const pending = total - completed;
+  // Utilisation de useMemo pour optimiser les calculs sur le tableau tasks
+  const { total, completed, pending } = useMemo(() => {
+    const totalCount = tasks.length;
+    const completedCount = tasks.filter((t) => t.completed).length;
+    return {
+      total: totalCount,
+      completed: completedCount,
+      pending: totalCount - completedCount,
+    };
+  }, [tasks]);
 
   return (
     <div className="w-full mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4">

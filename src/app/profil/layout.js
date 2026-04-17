@@ -1,5 +1,4 @@
 "use client";
-import { AuthProvider } from "@/contexts/AuthContext";
 import dynamic from "next/dynamic";
 import { Toaster } from "react-hot-toast";
 
@@ -7,7 +6,7 @@ const SidebarNav = dynamic(() => import("../../components/SidebarNav"), { ssr: f
 
 export default function ProtectedLayout({ children }) {
   return (
-    <AuthProvider>
+    <>
       <SidebarNav />
       <main className="md:ml-72 flex-1">{children}</main>
       <Toaster
@@ -32,6 +31,6 @@ export default function ProtectedLayout({ children }) {
           },
         }}
       />
-    </AuthProvider>
+    </>
   );
 }

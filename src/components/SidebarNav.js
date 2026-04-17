@@ -30,11 +30,64 @@ const SidebarNav = () => {
     }
   }, [logOut, router]);
 
+  const handleNavClick = useCallback((href, disabled) => {
+    if (!disabled) {
+      router.push(href);
+    }
+  }, [router]);
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+
   // Masque la barre latérale sur les pages d'authentification
   if (pathname === "/login" || pathname === "/signup") return null;
 
-  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
-  const closeMobileMenu = () => setMobileMenuOpen(false);
+  const renderNavItems = (isMobile = false) => (
+    <>
+      {navItems.map((item) => {
+        const isActive = pathname === item.href;
+        const isProtected = ["/taches", "/shared", "/profil"].includes(item.href);
+        const isDisabled = isProtected && !user;
+        const Icon = item.icon;
+
+        return (
+          <button
+            key={item.href}
+            onClick={() => {
+              handleNavClick(item.href, isDisabled);
+              if (isMobile) closeMobileMenu();
+            }}
+            className={`w-full flex items-center gap-4 py-4 px-6 active:scale-[0.99] transition-transform text-left border-none bg-none ${
+              isDisabled
+                ? "text-[#5a4f48] opacity-50 cursor-not-allowed pointer-events-none"
+                : isActive
+                ? "bg-[#2c2a26] text-[#c28e46] border-l-4 border-[#c28e46] cursor-pointer"
+                : "text-[#8a8171] hover:bg-[#2c2a26] hover:text-[#e8e1dc] cursor-pointer"
+            }`}
+            title={isDisabled ? "Connectez-vous pour accéder" : undefined}
+            disabled={isDisabled}
+          >
+            <Icon size={18} />
+            <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">{item.label}</span>
+          </button>
+        );
+      })}
+      {user && (
+        <button
+          type="button"
+          onClick={() => {
+            handleLogout();
+            if (isMobile) closeMobileMenu();
+          }}
+          className="w-full flex items-center gap-4 text-[#8a8171] py-4 px-6 hover:bg-[#2c2a26] hover:text-[#e8e1dc] active:scale-[0.99] transition-transform text-left border-none bg-none cursor-pointer"
+          aria-label="Déconnexion"
+        >
+          <LogOut size={18} />
+          <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">Déconnexion</span>
+        </button>
+      )}
+    </>
+  );
 
   return (
     <>
@@ -54,41 +107,7 @@ const SidebarNav = () => {
           </div>
         </div>
         <nav className="flex-1 mt-4">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            const isProtected = ["/taches", "/shared", "/profil"].includes(item.href);
-            const isDisabled = isProtected && !user;
-            const Icon = item.icon;
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={isDisabled ? (e) => e.preventDefault() : undefined}
-                className={`flex items-center gap-4 py-4 px-6 active:scale-[0.99] transition-transform ${
-                  isDisabled
-                    ? "text-[#5a4f48] opacity-50 cursor-not-allowed pointer-events-none"
-                    : isActive
-                    ? "bg-[#2c2a26] text-[#c28e46] border-l-4 border-[#c28e46]"
-                    : "text-[#8a8171] hover:bg-[#2c2a26] hover:text-[#e8e1dc]"
-                }`}
-                title={isDisabled ? "Connectez-vous pour accéder" : undefined}
-              >
-                <Icon size={18} />
-                <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">{item.label}</span>
-              </a>
-            );
-          })}
-          {user && (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center gap-4 text-[#8a8171] py-4 px-6 hover:bg-[#2c2a26] hover:text-[#e8e1dc] active:scale-[0.99] transition-transform text-left"
-              aria-label="Déconnexion"
-            >
-              <LogOut size={18} />
-              <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">Déconnexion</span>
-            </button>
-          )}
+          {renderNavItems(false)}
         </nav>
       </aside>
 
@@ -129,50 +148,7 @@ const SidebarNav = () => {
           </div>
         </div>
         <nav className="flex-1 mt-4">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            const isProtected = ["/taches", "/shared", "/profil"].includes(item.href);
-            const isDisabled = isProtected && !user;
-            const Icon = item.icon;
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={(e) => {
-                  if (isDisabled) {
-                    e.preventDefault();
-                  } else {
-                    closeMobileMenu();
-                  }
-                }}
-                className={`flex items-center gap-4 py-4 px-6 active:scale-[0.99] transition-transform ${
-                  isDisabled
-                    ? "text-[#5a4f48] opacity-50 cursor-not-allowed pointer-events-none"
-                    : isActive
-                    ? "bg-[#2c2a26] text-[#c28e46] border-l-4 border-[#c28e46]"
-                    : "text-[#8a8171] hover:bg-[#2c2a26] hover:text-[#e8e1dc]"
-                }`}
-                title={isDisabled ? "Connectez-vous pour accéder" : undefined}
-              >
-                <Icon size={18} />
-                <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">{item.label}</span>
-              </a>
-            );
-          })}
-          {user && (
-            <button
-              type="button"
-              onClick={() => {
-                handleLogout();
-                closeMobileMenu();
-              }}
-              className="w-full flex items-center gap-4 text-[#8a8171] py-4 px-6 hover:bg-[#2c2a26] hover:text-[#e8e1dc] active:scale-[0.99] transition-transform text-left"
-              aria-label="Déconnexion"
-            >
-              <LogOut size={18} />
-              <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">Déconnexion</span>
-            </button>
-          )}
+          {renderNavItems(true)}
         </nav>
       </aside>
     </>

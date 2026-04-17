@@ -1,37 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Grand Livre des Quêtes - Task Manager
 
-## Getting Started
+Gestionnaire de tâches collaboratif avec authentification Firebase et synchronisation temps réel. Interface thématisée Monster Hunter.
 
-First, run the development server:
+## 🚀 Lien de Déploiement
+
+**[https://taskmanager-filrouge-57492.web.app/](https://taskmanager-filrouge-57492.web.app/)**
+
+## 📋 Fonctionnalités
+
+### Authentification
+- ✅ Inscription et connexion avec Firebase Auth
+- ✅ Persistance de session avec sessionStorage
+- ✅ Déconnexion sécurisée
+
+### Gestion des Tâches
+- ✅ Créer, modifier, supprimer des tâches
+- ✅ Filtrer par priorité (haute, moyenne, basse)
+- ✅ Filtrer par statut (en cours, complétées, archivées)
+- ✅ Recherche en temps réel
+- ✅ Tri par date ou priorité
+- ✅ Synchronisation temps réel avec Firestore/RTDB
+
+### Collaboration
+- ✅ Partager des listes avec d'autres utilisateurs
+- ✅ Gestion d'escouades (groupes d'utilisateurs)
+- ✅ Permissions granulaires par liste
+
+### Performance
+- ✅ Lazy loading des composants
+- ✅ Service Worker pour mode hors ligne
+- ✅ Critical CSS inline
+- ✅ Optimisation des images
+- ✅ Cache statique côté client
+
+## 🛠️ Technologies Utilisées
+
+- **Frontend**: Next.js 16.2.3, React 19, Tailwind CSS
+- **Backend**: Firebase (Auth, Firestore/RTDB)
+- **Styles**: Material Design 3, design system custom
+- **Deployment**: Firebase Hosting
+- **Build**: Turbopack
+
+## 📦 Installation
+
+### Prérequis
+- Node.js 18+
+- npm ou yarn
+
+### Étapes
 
 ```bash
+# 1. Cloner le repo
+git clone <repo-url>
+cd taskmanager
+
+# 2. Installer les dépendances
+npm install
+
+# 3. Configurer Firebase
+# Créer un fichier .env.local avec vos clés Firebase
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+# (voir .env.example)
+
+# 4. Démarrer le serveur de développement
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Ouvrir http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🏗️ Structure du Projet
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```
+src/
+├── app/                    # Pages Next.js
+│   ├── page.js            # Home (Dashboard)
+│   ├── taches/            # Gestion des tâches
+│   ├── shared/            # Gestion des listes partagées
+│   ├── profil/            # Profil utilisateur
+│   └── login/, signup/    # Authentification
+├── components/            # Composants React
+│   ├── ProtectedRoute.js  # Wrapper pour routes protégées
+│   ├── SidebarNav.js      # Navigation latérale
+│   └── ...                # Autres composants
+├── contexts/
+│   └── AuthContext.js     # Contexte d'authentification global
+├── services/
+│   ├── rtdbTaskService.js # Opérations tâches (RTDB)
+│   ├── sharedListService.js
+│   └── userService.js
+├── styles/                # Feuilles de style CSS
+├── hooks/                 # Hooks React personnalisés
+└── lib/
+    └── firebase.js        # Configuration Firebase
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Déploiement
 
-## Learn More
+### Firebase Hosting
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# 1. Build
+npm run build
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 2. Deploy
+firebase deploy --only hosting
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📖 Scripts Disponibles
 
-## Deploy on Vercel
+```bash
+npm run dev       # Démarrer le serveur de développement
+npm run build     # Compiler la production
+npm run start     # Démarrer le serveur de production
+npm run lint      # Vérifier la qualité du code
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔒 Sécurité
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# taskmanager
+- Authentification Firebase (OAuth, email/password)
+- Firestore Security Rules pour protected access
+- Validation côté client et serveur
+- Protection des routes (ProtectedRoute)
+
+## 🎨 Design System
+
+- **Couleurs**: Material Design 3 (Forbidden Lands theme)
+- **Typographie**: Geist, Work Sans
+- **Composants**: Custom components + Lucide icons
+
+## 📋 Notes de Développement
+
+- Session auth persiste via `sessionStorage` + Firebase `onAuthStateChanged`
+- AuthProvider au niveau root pour éviter les réinitialisations
+- Client-side routing avec `router.push()` pour SPA experience
+- Lazy loading des routes protégées
+
+## 👤 Auteur
+
+Louna Petitfils
+
+## 📄 Licence
+
+MIT
+

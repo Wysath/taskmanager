@@ -60,14 +60,19 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let ignore = false;
+    let authStateTimeout;
 
     const unsubscribe = onAuthStateChanged(
       getAuthInstance(),
       (currentUser) => {
         if (ignore) return;
+        
+        // Nettoie le timeout si on reçoit une réponse
+        if (authStateTimeout) {
+          clearTimeout(authStateTimeout);
+        }
 
         // Evite les blocages réseau : mise à jour du profil en tâche de fond
-        // via l'écouteur onAuthStateChanged au lieu d'attendre ici
         setUser(currentUser);
 
         // Sauvegarde du cache utilisateur
@@ -84,7 +89,6 @@ export function AuthProvider({ children }) {
             );
             
             // ✅ Tâche de fond : mise à jour du profil sans bloquer le flux d'auth
-            // Les opérations Firestore peuvent prendre 300+ ms sur 4G lent
             if ("requestIdleCallback" in window) {
               requestIdleCallback(
                 () => {
@@ -92,10 +96,9 @@ export function AuthProvider({ children }) {
                     (err) => console.error("[AuthContext] Profile update error:", err)
                   );
                 },
-                { timeout: 5000 } // Force update after 5s if browser is busy
+                { timeout: 5000 }
               );
             } else {
-            // Fallback pour les navigateurs sans requestIdleCallback
               setTimeout(() => {
                 createOrUpdateUserProfile(currentUser.uid, currentUser.email).catch(
                   (err) => console.error("[AuthContext] Profile update error:", err)
@@ -109,13 +112,24 @@ export function AuthProvider({ children }) {
         setLoading(false);
       },
       (err) => {
+        if (ignore) return;
+        if (authStateTimeout) clearTimeout(authStateTimeout);
         setError(translateFirebaseError(err));
         setLoading(false);
       }
     );
 
+    // ⏱️ TIMEOUT: Si Firebase n'a pas répondu après 2s, on suppose qu'on est déjà hydraté
+    // et qu'il n'y a pas de user (ne pas bloquer infiniment)
+    authStateTimeout = setTimeout(() => {
+      if (!ignore && loading) {
+        setLoading(false);
+      }
+    }, 2000);
+
     return () => {
       ignore = true;
+      if (authStateTimeout) clearTimeout(authStateTimeout);
       unsubscribe();
     };
   }, []);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,22 +16,37 @@ export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const redirectedRef = useRef(false);
+  const [isClient, setIsClient] = useState(false);
 
-  // Rediriger APRÈS hydration si pas connecté (une seule fois)
+  // Marquer qu'on est côté client
   useEffect(() => {
-    if (!loading && !user && !redirectedRef.current) {
+    setIsClient(true);
+  }, []);
+
+  // Rediriger si pas connecté
+  useEffect(() => {
+    if (!isClient) return;
+    if (loading) return; // Attendre la fin du chargement
+    if (redirectedRef.current) return; // Déjà redirigé
+    
+    if (!user) {
+      // Pas connecté → rediriger vers login
       redirectedRef.current = true;
       router.replace("/login");
     }
-  }, [loading, user, router]);
+  }, [isClient, loading, user, router]);
 
-  // ✅ IMPORTANT: Toujours rendre le contenu (même si pas connecté à la build)
-  // Pour éviter hydration mismatch avec server pre-render
-  // suppressHydrationWarning accepte le mismatch intentionnel
-  return (
-    <div suppressHydrationWarning>
-      {children}
-    </div>
-  );
+  // Ne pas afficher pendant le chargement ou la redirection
+  if (!isClient || loading) {
+    return null;
+  }
+
+  // Pas connecté → redirection en cours, ne pas afficher
+  if (!user && redirectedRef.current) {
+    return null;
+  }
+
+  // Connecté → afficher le contenu
+  return <div suppressHydrationWarning>{children}</div>;
 }
 

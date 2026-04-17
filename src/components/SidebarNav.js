@@ -56,16 +56,22 @@ const SidebarNav = () => {
         <nav className="flex-1 mt-4">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
+            const isProtected = ["/taches", "/shared", "/profil"].includes(item.href);
+            const isDisabled = isProtected && !user;
             const Icon = item.icon;
             return (
               <a
                 key={item.href}
                 href={item.href}
+                onClick={isDisabled ? (e) => e.preventDefault() : undefined}
                 className={`flex items-center gap-4 py-4 px-6 active:scale-[0.99] transition-transform ${
-                  isActive
+                  isDisabled
+                    ? "text-[#5a4f48] opacity-50 cursor-not-allowed pointer-events-none"
+                    : isActive
                     ? "bg-[#2c2a26] text-[#c28e46] border-l-4 border-[#c28e46]"
                     : "text-[#8a8171] hover:bg-[#2c2a26] hover:text-[#e8e1dc]"
                 }`}
+                title={isDisabled ? "Connectez-vous pour accéder" : undefined}
               >
                 <Icon size={18} />
                 <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">{item.label}</span>
@@ -125,17 +131,28 @@ const SidebarNav = () => {
         <nav className="flex-1 mt-4">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
+            const isProtected = ["/taches", "/shared", "/profil"].includes(item.href);
+            const isDisabled = isProtected && !user;
             const Icon = item.icon;
             return (
               <a
                 key={item.href}
                 href={item.href}
-                onClick={closeMobileMenu}
+                onClick={(e) => {
+                  if (isDisabled) {
+                    e.preventDefault();
+                  } else {
+                    closeMobileMenu();
+                  }
+                }}
                 className={`flex items-center gap-4 py-4 px-6 active:scale-[0.99] transition-transform ${
-                  isActive
+                  isDisabled
+                    ? "text-[#5a4f48] opacity-50 cursor-not-allowed pointer-events-none"
+                    : isActive
                     ? "bg-[#2c2a26] text-[#c28e46] border-l-4 border-[#c28e46]"
                     : "text-[#8a8171] hover:bg-[#2c2a26] hover:text-[#e8e1dc]"
                 }`}
+                title={isDisabled ? "Connectez-vous pour accéder" : undefined}
               >
                 <Icon size={18} />
                 <span className="font-['Work_Sans'] uppercase text-xs font-semibold tracking-wider">{item.label}</span>
